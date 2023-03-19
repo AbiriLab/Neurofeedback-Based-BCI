@@ -1,42 +1,17 @@
-Index,ID,M/F,I/O,Trigger Response
-0,,M,O,
-1,,F,O,
-2,,F,I,
-3,,M,O,
-4,,M,I,
-5,,F,I,
-6,,F,O,
-7,,F,O,
-8,,F,O,
-9,,F,I,
-10,,M,I,
-11,,F,O,
-12,,F,I,
-13,,M,I,
-14,,F,O,
-15,,M,I,
-16,,M,O,
-17,,F,O,
-18,,F,I,
-19,,F,I,
-20,,F,I,
-21,,M,I,
-22,,M,O,
-23,,F,I,
-24,,F,I,
-25,,M,O,
-26,,F,I,
-27,,F,O,
-28,,F,O,
-29,,M,O,
-30,,F,O,
-31,,F,I,
-32,,M,O,
-33,,M,I,
-34,,M,I,
-35,,F,O,
-36,,F,I,
-37,,M,I,
-38,,M,O,
-39,,F,I,
-40,,F,O,
+Index,Patient Name,Pre-Evaluation,Neurofeedback,Post-Evaluation,Block Seq
+0,Patient Name,Pre-Evaluation,Neurofeedback,Post-Evaluation, Block Sequence
+1,Jane Doe,3,0,3,
+2,John Doe,0,0,0,
+3,Joe Doe,6,0,1,
+4,Luke,7,0,0,
+5,John,2,0,0,
+6,Larry,1,0,0,
+7,test,6,0,0,6 3 7 2 5 1 8 4
+8,test4,3,0,0,5 3 8 7 1 2 6 4
+9,,1,0,0,6 1 3 7 8 5 2 4
+10,bobby,3,0,0,"[2, 3, 4, 7, 1, 5, 6, 8]"
+11,timmy,2,0,0,"[7, 5, 2, 8, 4, 1, 6, 3]"
+12,carl,3,0,0,"[4, 5, 7, 6, 1, 8, 2, 3]"
+13,bebby,0,0,0,"[8, 6, 1, 4, 3, 7, 5, 2]"
+14,sozey,2,0,0,"[3, 8, 5, 1, 4, 6, 7, 2]"
+15,sozoey,0,0,0,
