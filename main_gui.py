@@ -10,6 +10,7 @@ from image_display import *
 
 
 class Window(QtWidgets.QWidget):
+    #Variables
     def __init__(self):
         super(Window, self).__init__()
         self.setGeometry(50, 50, 1000, 500)
@@ -32,37 +33,40 @@ class Window(QtWidgets.QWidget):
             file.close()
         self.home()
 
+    #Home screen window
     def home(self):
         self.blocks = 0
-
+        #Patient section on the GUI
+        #Creating Patient label
         label1 = QtWidgets.QLabel('Patient:')
         label1.setFixedWidth(50)
         label1.setStyleSheet('font-size: 15px; ')
-
+        #Creating the text box
+        self.line = QtWidgets.QLineEdit(self)
+        self.line.setFixedWidth(200)
+        self.line.setStyleSheet('background: #EEEEEE; margin-right: 20px')
+        #Creating the patient data button
         self.patient_btn = QtWidgets.QPushButton('Add Patient Data', self)
         self.patient_btn.setFixedWidth(100)
         self.patient_btn.setStyleSheet('background: #1634EF')
         self.patient_btn.clicked.connect(self.add_patient_data)
-
-        self.line = QtWidgets.QLineEdit(self)
-        self.line.setFixedWidth(200)
-        # label1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.line.setStyleSheet('background: #EEEEEE; margin-right: 20px')
-
+        #Expriement controls section
+        #Creating the Start button
         self.start_btn = QtWidgets.QPushButton('Start', self)
         self.start_btn.setFixedWidth(75)
         self.start_btn.setStyleSheet('background: #228C22')
         self.start_btn.clicked.connect(self.run_next_stage)
-
+        #Creating the Stop button
         self.stop_btn = QtWidgets.QPushButton('Stop', self)
         self.stop_btn.setFixedWidth(75)
         self.stop_btn.setStyleSheet('background: #B80F0A')
         self.stop_btn.clicked.connect(self.func)
-
+        #Trial Section
+        #Creating phase label
         self.label2 = QtWidgets.QLabel('Phase:')
         self.label2.setFixedWidth(50)
         self.label2.setStyleSheet('font-size: 15px')
-
+        #Creating drop down menu to select the phase
         self.combobox = QtWidgets.QComboBox(self)
         self.combobox.addItem('Pre-Evaluation')
         self.combobox.addItem('Neurofeedback')
@@ -70,11 +74,11 @@ class Window(QtWidgets.QWidget):
         self.combobox.setFixedWidth(100)
         self.combobox.setStyleSheet('background: #FFFFFF; margin-left: 1px; margin-right: 1px')
         self.combobox.activated[str].connect(self.onStageChange)
-
+        #Creating Phase label
         self.label3 = QtWidgets.QLabel('Stage:')
         self.label3.setFixedWidth(50)
         self.label3.setStyleSheet('font-size: 15px')
-
+        #Loading in image assests that will appear in the GUI window
         self.image = QtGui.QPixmap("Asssets/BlockLoad0_8.png").scaled(300, 300, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
         self.image1 = QtGui.QPixmap("Asssets/BlockLoad1_8.png").scaled(300, 300, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
         self.image2 = QtGui.QPixmap("Asssets/BlockLoad2_8.png").scaled(300, 300, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
@@ -84,13 +88,13 @@ class Window(QtWidgets.QWidget):
         self.image6 = QtGui.QPixmap("Asssets/BlockLoad6_8.png").scaled(300, 300, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
         self.image7 = QtGui.QPixmap("Asssets/BlockLoad7_8.png").scaled(300, 300, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
         self.image8 = QtGui.QPixmap("Asssets/BlockLoad8_8.png").scaled(300, 300, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
-
+        #Creating the label for the image to show the current stage
         self.block = QtWidgets.QLabel()
         self.block.setPixmap(self.image)
         self.block.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.block.setFixedWidth(300)
         self.block.setFixedHeight(50)
-
+        #Placing all the widgets on the GUI window(grid format)
         self.grid.addWidget(label1, 0, 0)
         self.grid.addWidget(self.line, 0, 1)
         self.grid.addWidget(self.start_btn, 0, 2)
@@ -100,16 +104,20 @@ class Window(QtWidgets.QWidget):
         self.grid.addWidget(self.combobox, 2, 1)
         self.grid.addWidget(self.label3, 3, 0)
         self.grid.addWidget(self.block, 3, 1)
+        #Displays GUI window
         self.show()
 
+    #Called on by the Start button, runs the next stage for the patient
     def run_next_stage(self):
+        #Opens subwindow for patient if not already opened
         if self.sub_window_active:
             self.image_window.pause = False
         else:
             self.add_patient_data()
             self.sub_window()
-
+        #Increments the satge
         self.stage += 1
+        #Sets stage limit based on phase and updates patient's progress
         if self.combobox.currentText() == 'Pre-Evaluation':
             if self.stage > 8:
                 self.stage = 1
@@ -120,9 +128,11 @@ class Window(QtWidgets.QWidget):
                 self.stage = 1
             self.prestage = self.stage
             self.patient_progress[3] = str(self.stage)
+        #Updates the GUI
         self.update_patient_data()
         self.update_main_window()
 
+    #Opens Tk subwindow for patient
     def sub_window(self):
         self.root = Tk()
         self.root.geometry("%dx%d+%d+%d" % (800, 600, 300, 300))
@@ -259,7 +269,7 @@ class Window(QtWidgets.QWidget):
         with open('NF_Patient_Progress.csv', 'w', newline='') as file:
             writer = csv.writer(file)
             for row in self.patient_list:
-                writer.writerow(row)
+                writer.writerow(row) 
             file.close()
         self.update_main_window()
         print('Patient Data Updated')
