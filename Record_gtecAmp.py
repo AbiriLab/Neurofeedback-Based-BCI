@@ -1,27 +1,29 @@
 import pygds as g
 import numpy as np
 import pandas as pd
-
+from time import perf_counter
 d = g.GDS()
 
-minf_s = sorted(d.GetSupportedSamplingRates()[0].items())[0]
+minf_s = sorted(d.GetSupportedSamplingRates()[0].items())[8] #8 refres to sampling rate=4800
 d.SamplingRate, d.NumberOfScans = minf_s
 
 for ch in d.Channels:
     ch.Acquire = True
 d.SetConfiguration()
-scope = g.Scope(1 / d.SamplingRate, title="Channels: %s", ylabel=u"U[μV]")
+# scope = g.Scope(1/d.SamplingRate, title="Channels: %s", ylabel = u"U[μV]")
 
-matrix_data = []
-event_time = int(input('Enter the time of event:'))
-i = 0
-while i < event_time:
+Matrixdata=[]
+itteration=int(input('Enter the number of itterartions:')) #Itteration means the NumberOfScans
+i=0
+start_time = perf_counter()
+while i<itteration:
     aa = d.GetData(d.SamplingRate)
-    matrix_data.extend(aa)
-    i += 1
-my_array = np.array(matrix_data)
+    Matrixdata.extend(aa)
+    i+=1
+end_time = perf_counter() 
+my_array = np.array(Matrixdata)
+time_spent = end_time - start_time
 
-# print(my_array)
-# print(type(my_array))
-# print(my_array.shape)
+print(time_spent)
+print(d.SamplingRate)
 pd.DataFrame(my_array).to_excel('my_matrix.xlsx')

@@ -1,4 +1,5 @@
 import pandas as pd
+import csv
 
 # adding M/F
 block1_mf = ['M', 'F', 'M', 'M', 'M', 'F', 'M', 'F', 'F', 'F', 'F', 'F', 'F', 'M', 'F', 'F', 'F', 'F', 'F', 'M', 'F',
@@ -41,12 +42,24 @@ block2_io = ['O', 'O', 'I', 'O', 'I', 'I', 'O', 'O', 'O', 'I', 'I', 'O', 'I', 'I
 
 # df_out = pd.concat([my_array, image_df], axis=1)
 
-def create_df(block_num, target_id):
-    df = pd.DataFrame(columns=['Target', 'M/F', 'I/O', 'Trigger Response'])
-    df['Target'] = [target_id] * 41
-    df['M/F'] = block1_mf
-    df['I/O'] = block1_io
-    print(df)
+# def create_df(block_num, target_id):
+#     df = pd.DataFrame(columns=['Target', 'M/F', 'I/O', 'Trigger Response'])
+#     df['Target'] = [target_id] * 41
+#     df['M/F'] = block1_mf
+#     df['I/O'] = block1_io
+#     print(df)
+#
+#
+# create_df(block_num=1, target_id='M')
 
+in_list1 = [1,2,3,4]
+in_list2 = [12,13,14,15]
+out_list = [in_list1, in_list2]
+print(out_list)
 
-create_df(block_num=1, target_id='M')
+df = pd.DataFrame(columns=['List 1 Vals', 'List 2 Vals'])
+df.loc[len(df.index)] = out_list
+
+print(df)
+
+df.to_csv('out.csv', encoding='utf-8', index_label='Index')

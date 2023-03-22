@@ -5,6 +5,8 @@ from tkinter import *
 from PIL import ImageTk, Image
 import time
 from PIL import Image, ImageDraw, ImageFilter
+import random
+import csv
 
 
 class DisplayImage:
@@ -18,10 +20,16 @@ class DisplayImage:
         self.folder_dir = os.getcwd() + "/Images/Composite_Images"
         self.blank_img = Image.open('Images/BlankPic.jpg')
         self.TIME_BETWEEN = 1000
-        for i in range(8):
-            self.CURRENT_FOLDER = "/Block" + str(i+1)
+
+        r = [1, 2, 3, 4, 5, 6, 7, 8]
+        random.shuffle(r)
+        self.randomized_blocks = r
+        print(self.randomized_blocks)
+
+        for i in r:
+            self.CURRENT_FOLDER = "/Block" + str(i)
             for images in range(40):
-                img = Image.open(f"Images/Composite_Images/Block{i+1}/{images+1}.jpg")
+                img = Image.open(f"Images/Composite_Images/Block{i}/{images+1}.jpg")
                 self.image_arr.append(img)
         self.my_canvas = Canvas(self.master, width=800, height=600, highlightthickness=0)
         self.my_canvas.pack()
@@ -32,7 +40,6 @@ class DisplayImage:
         self.label.config(anchor=CENTER)
         self.label.pack()
 
-
     def next_image(self):
         if self.pause:  # count to be determined based off of how many images in folder
             next_img = Image.open(f"Images/please-wait.png")
@@ -41,7 +48,7 @@ class DisplayImage:
             self.label.config(image=photo_img)
             self.label.image = photo_img
             self.master.after(self.TIME_BETWEEN, self.next_image)
-        #elif self.COUNT % 2 == 0:
+        # elif self.COUNT % 2 == 0:
         else:
             next_img = self.image_arr[self.COUNT]
             next_img_resized = next_img.resize((800, 600), Image.Resampling.LANCZOS)
@@ -49,11 +56,11 @@ class DisplayImage:
             self.label.config(image=photo_img)
             self.label.image = photo_img
             self.COUNT += 1
-            if self.COUNT%40 == 0:
+            if self.COUNT % 40 == 0:
                 self.pause = True
                 self.curr_block += 1
             self.master.after(self.TIME_BETWEEN, self.next_image)
-        #else:
+        # else:
         #    next_img = self.blank_img
         #    next_img_resized = next_img.resize((800, 600), Image.Resampling.LANCZOS)
         #    photo_img = ImageTk.PhotoImage(next_img_resized)
