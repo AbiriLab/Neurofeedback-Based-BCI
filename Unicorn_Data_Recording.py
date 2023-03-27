@@ -11,7 +11,7 @@ configuration = device.GetConfiguration()
 SamplingRate = UnicornPy.SamplingRate
 
 # Set the duration of the data acquisition
-AcquisitionDurationInSeconds = 1  # 10 seconds
+AcquisitionDurationInSeconds = 1 # 10 seconds
 
 # Set the frame length
 FrameLength = 1  # 1 sample per frame
@@ -29,35 +29,32 @@ device.StartAcquisition(True)
 # Loop over the required number of GetData calls
 
 tdata=[]
-start_time = perf_counter()
-print("start time=",start_time)
+
+# print("start time=",start_time)
 for i in range(numberOfGetDataCalls):
 
     # Receives the configured number of samples from the Unicorn device and writes it to the acquisition buffer.
+    start_time = perf_counter()
     device.GetData(FrameLength, receiveBuffer, receiveBufferBufferLength)
+    end_time = perf_counter()
 
     # Convert receive buffer to numpy float array 
     dataa = np.frombuffer(receiveBuffer, dtype=np.float32, count=numberOfAcquiredChannels * FrameLength)
     data = np.reshape(dataa, (FrameLength, numberOfAcquiredChannels))
     print("Sample Number=", i)
-    end_time = perf_counter() 
+     
+    
+    
+    print("start time=",start_time)
     print("end time=", end_time)
-    print(data)
+    
+    # print(end_time-start_time)
+    # start_time=end_time
+    # print(data)
     tdata.append(data)
 device.StopAcquisition()
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
     # Do something with the acquired data
     
 # fdata = np.reshape(tdata, (numberOfGetDataCalls, numberOfAcquiredChannels))

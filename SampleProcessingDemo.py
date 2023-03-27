@@ -5,7 +5,6 @@ import math
 from scipy import io
 from datetime import datetime
 
-import pandas as pd
 FILENAME = 'RecordedData'
 
 # define acquisition device constants (g.USBamp --> GDS)
@@ -19,12 +18,12 @@ NUMBEROFSCANS = 0   # block size for amplifier (data transmission from device --
                       
 
 # define visualization constants
-SHOWLASTXSECONDS = 0.004
+SHOWLASTXSECONDS = 1
 
 datetimeStr = datetime.now().strftime("%Y%m%d_%H%M%S")
 filename = FILENAME + '_' + datetimeStr + '.mat'
 
-# samples = []
+samples = []
 os.system('cls')
 
 # callback for each GetData cycle when the specified block size of samples was acquired
@@ -52,10 +51,6 @@ def GetDataCallback(dataBlock):
     continueDAQ = True
     totalSamples = samples.shape[0]
     displaySamples = math.ceil(SHOWLASTXSECONDS*SAMPLINGRATE/BLOCKSIZE) * BLOCKSIZE
-    
-    pd.DataFrame(samples).to_excel('my_matrix.xlsx')
-
-
     if (totalSamples % displaySamples == 0 ):
         samples2display = samples[totalSamples-min(totalSamples,displaySamples):]
         continueDAQ = scope(samples2display)
@@ -63,13 +58,12 @@ def GetDataCallback(dataBlock):
         os.system('cls')
         np.set_printoptions(formatter={'float': '{: 10.3f}'.format}, linewidth=1024)
         print("\n".join([str(x) for x in samples2display]))
-    
-
+        
     # VISUALIZATION OPTION B: show only the latest datablock -> does not make sense for little BLOCKSIZE values
     #continueDAQ = scope(dataBlock)
         
     return continueDAQ
-
+    
     
 print('Opening device ...   ')
 d=pygds.GDS(SERIALNUMBER)
