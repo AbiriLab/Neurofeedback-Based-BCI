@@ -32,34 +32,43 @@ class RootWindow:
 
         self.frame_1 = tk.Frame(master)
 
+        self.eeg_label = tk.Label(self.frame_1, text="Recording Device:", font=15)
+        self.eeg_label.grid(row=1, column=0, pady=15, padx=5)
+        eeg_list = ["Unicorn EEG", "gtec EEG"]
+        self.curr_eeg = StringVar()
+        self.phase_box = ttk.Combobox(self.frame_1, values=eeg_list, state='readonly', font=15,
+                                      textvariable=self.curr_eeg)
+        self.phase_box.set("EEG Recording Device")
+        self.phase_box.grid(row=1, column=1, pady=15, padx=5)
+
         self.patient_name_label = tk.Label(self.frame_1, text="Patient Data:", font=15)
-        self.patient_name_label.grid(row=1, column=0, pady=15, padx=5)
+        self.patient_name_label.grid(row=2, column=0, pady=15, padx=5)
         self.patient_name_data = tk.StringVar()
         self.patient_name_entry = tk.Entry(self.frame_1, width=30, font=15)
-        self.patient_name_entry.grid(row=1, column=1, pady=15, padx=5)
+        self.patient_name_entry.grid(row=2, column=1, pady=15, padx=5)
 
         self.phase_label = tk.Label(self.frame_1, text="Current Phase:", font=15)
-        self.phase_label.grid(row=4, column=0, pady=15, padx=5)
+        self.phase_label.grid(row=5, column=0, pady=15, padx=5)
         self.curr_phase = tk.StringVar()
         self.curr_phase_num = tk.Label(self.frame_1, textvariable=self.curr_phase, font=15)
-        self.curr_phase_num.grid(row=4, column=1, pady=15, padx=5)
+        self.curr_phase_num.grid(row=5, column=1, pady=15, padx=5)
         plist = ["Pre-Evaluation", "Neurofeedback", "Post-Evaluation"]
         self.phase_box = ttk.Combobox(self.frame_1, values=plist, state='readonly', font=15, textvariable=self.curr_phase)
         self.phase_box.set("Select the Phase")
-        self.phase_box.grid(row=3, column=1, pady=15, padx=5)
+        self.phase_box.grid(row=4, column=1, pady=15, padx=5)
 
         self.block_label = tk.Label(self.frame_1, text="Last Block\n Completed:", font=10)
-        self.block_label.grid(row=5, column=0, pady=15, padx=5)
+        self.block_label.grid(row=6, column=0, pady=15, padx=5)
         self.curr_block = StringVar()
         self.block_num = tk.Label(self.frame_1, textvariable=self.curr_block, font=15)
-        self.block_num.grid(row=5, column=1, columnspan=2, pady=15, padx=5)
+        self.block_num.grid(row=6, column=1, columnspan=2, pady=15, padx=5)
 
         self.phase_prog_lab = tk.Label(self.frame_1, text="Phase Progress:", font=15)
-        self.phase_prog_lab.grid(row=6, column=0, pady=15, padx=5)
+        self.phase_prog_lab.grid(row=7, column=0, pady=15, padx=5)
         self.progress = tk.IntVar()
         self.phase_prog = ttk.Progressbar(self.frame_1, variable=self.progress, length=250)
         self.progress.set(0)
-        self.phase_prog.grid(row=6, column=1, pady=15, padx=5)
+        self.phase_prog.grid(row=7, column=1, pady=15, padx=5)
 
         self.frame_1.grid(padx=30, pady=50, row=0, column=0)
 
@@ -82,8 +91,8 @@ class RootWindow:
         self.end_trial_but = Button(self.frame_2, text="End Trial", bg="red", font=15, command=self.end_trial)
         self.end_trial_but.grid(row=4, column=1, pady=15, padx=5)
 
-        self.update_trial_but = Button(self.frame_2, text="Update Trial", bg="light green", font=15, command=self.update_patient_data)
-        self.update_trial_but.grid(row=5, column=0, columnspan=2, pady=15, padx=5)
+        # self.update_trial_but = Button(self.frame_2, text="Update Trial", bg="light green", font=15, command=self.update_patient_data)
+        # self.update_trial_but.grid(row=5, column=0, columnspan=2, pady=15, padx=5)
 
         self.frame_2.grid(padx=30, pady=50, row=0, column=1)
 
@@ -138,7 +147,7 @@ class RootWindow:
         self.patient_progress[4] = self.seq
         self.patient_data_list.append(self.patient_progress)
         self.patient_index = len(self.patient_data_list) - 1
-        print(f"New Data Added: {self.patient_progress}")
+        print(f"New data created, please click 'Add Data'")
         # self.update_gui()
 
     def add_patient_data(self):
@@ -146,7 +155,7 @@ class RootWindow:
             writer = csv.writer(csvfile)
             for row in self.patient_data_list:
                 writer.writerow(row)
-        print(f"Full Data added to CSV: {self.patient_data_list}")
+        print(f"New Data Added: {self.patient_progress}")
 
     def open_image_win(self):
         self.top = Toplevel()
