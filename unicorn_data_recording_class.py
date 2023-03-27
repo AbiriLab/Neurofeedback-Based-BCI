@@ -37,8 +37,16 @@ class UnicornEEGAcquisition:
             print(reshaped_data)
             self.tdata.append(reshaped_data)
 
+<<<<<<< HEAD
             # f_data = np.reshape(self.tdata, (self.data_calls_num, self.acquired_channels))
             # print(f_data)
+=======
+            return self.tdata
+
+            # f_data = np.reshape(self.tdata, (self.data_calls_num, self.acquired_channels))
+            # print(f_data)
+            # move f_data to df to be appended to patient data df then saved to csv
+>>>>>>> 3d81cbcbdc5e33dee57698b85ee2e84732c85ee2
             # return f_data
 
         device.StopAcquisition()
@@ -52,5 +60,5 @@ if __name__ == "__main__":
     eeg_acquisition = UnicornEEGAcquisition(device=UnicornPy.Unicorn("UN-2021.05.36"),
                                             acquired_channels=device.GetNumberOfAcquiredChannels(),
                                             device_config=device.GetConfiguration(),
-                                            acquisition_duration=1, frame_length=1)
+                                            acquisition_duration=40, frame_length=1)
     eeg_acquisition.start_eeg_acquisition()
