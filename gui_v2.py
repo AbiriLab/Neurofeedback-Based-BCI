@@ -57,7 +57,7 @@ class RootWindow:
         self.phase_box.set("Select the Phase")
         self.phase_box.grid(row=4, column=1, pady=15, padx=5)
 
-        self.block_label = tk.Label(self.frame_1, text="Last Block\n Completed:", font=10)
+        self.block_label = tk.Label(self.frame_1, text="Current Block", font=10)
         self.block_label.grid(row=6, column=0, pady=15, padx=5)
         self.curr_block = StringVar()
         self.block_num = tk.Label(self.frame_1, textvariable=self.curr_block, font=15)
