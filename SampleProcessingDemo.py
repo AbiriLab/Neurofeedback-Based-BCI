@@ -8,7 +8,8 @@ from datetime import datetime
 FILENAME = 'RecordedData'
 
 # define acquisition device constants (g.USBamp --> GDS)
-SERIALNUMBER = 'UR-2020.08.14'
+SERIALNUMBER = 'UB-2011.07.13'
+# 'UR-2020.08.13'
 SAMPLINGRATE = 256
 BLOCKSIZE = 8       # block size for GetData (data retrieval from GDS --> Python)
 

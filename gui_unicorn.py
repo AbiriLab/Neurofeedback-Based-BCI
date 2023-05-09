@@ -8,6 +8,7 @@ from image_display_unicorn import *
 import UnicornPy
 import random
 device = UnicornPy.Unicorn("UN-2021.05.36")
+from scipy.signal import butter, filtfilt     
 
 
 class RootWindow:
@@ -36,7 +37,7 @@ class RootWindow:
         self.top = None
         self.r = [1, 2, 3, 4, 5, 6, 7, 8]
         self.key_pressed = False
-        self.key_pressed_during_loop = False
+        
         master.bind('<KeyPress>', self.key_press)
         with open('pat_progess_v2.csv', 'r') as file:
             reader = csv.reader(file)
@@ -185,7 +186,7 @@ class RootWindow:
         print('randomized_blocks:',seq_list[self.block])
         image_window.instructions_image()
         top.update()
-        device.StartAcquisition(True)
+        device.StartAcquisition(False)
         
         instruction_duration_samples = 250 * 5
         instruction_samples_collected = 0
@@ -195,7 +196,8 @@ class RootWindow:
         
         # for n in range(len(self.randomized_blocks)):
         excel_file_lable = pd.read_csv(f'Block{seq_list[self.block]}_key.csv')
-       
+        
+        key_data=[]
         tdataarray=[]
         tdata=[]
         data=[]  
@@ -203,7 +205,7 @@ class RootWindow:
             
                 row_data = excel_file_lable.iloc[j,[1, 2, 3]].to_numpy()
                 print(row_data)
-                self.key_pressed_during_loop = False
+                
                 image_window.next_image()
                 for i in range(self.numberOfGetDataCalls):
                     # Receives the configured number of samples from the Unicorn device and writes it to the acquisition buffer.
@@ -213,22 +215,22 @@ class RootWindow:
                     data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength,
                     
                     if self.key_pressed:
-                        self.key_pressed_during_loop = True
-                        self.key_pressed = False
-                        
-                    if self.key_pressed_during_loop:
-                        key_data = np.array([1])
-                        self.key_pressed = False
+                        key_data=[1]
+                        # self.key_pressed_during_loop = True
+                        self.key_pressed = False       
                     else:
-                        key_data = np.array([0]) 
-                    # print(key_data)        
-                    
+                        key_data=[0] 
+                                 
+                    # print(key_data)  
                     # Concatenate the row_data and data arrays
                     combined_data = np.concatenate((data, row_data))
                     combined_data = np.concatenate((combined_data, key_data))
                     tdata.append(combined_data)
                     tdataarray=np.array(tdata) 
-                   
+                
+                key_data.append(key_data)     
+                  
+                
                 with open('raw_eeg_data_'+str(image_window.curr_block)+'.csv', 'w', newline='') as csvfile:
                     writer = csv.writer(csvfile)
                     for row in tdataarray:
