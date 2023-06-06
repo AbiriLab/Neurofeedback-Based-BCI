@@ -15,7 +15,8 @@ COUNT = 0
 
 # PARAMETERS NEEDED TO BE CHANGED TO CHANGE WHAT IMAGES ARE DISPLAYED
 # get the path or directory,  could update this folder dir automatically to get correct images on certain phase
-folder_dir = "C:/Users/tnlab/PycharmProjects/Neurofeedback-Based-BCI/Images/IndoorScene"
+# folder_dir = "C:/Users/tnlab/Neurofeedback-Based-BCI/Images/IndoorScene"
+folder_dir= "C:/Users/tnlab/OneDrive/Documents/GitHub/Neurofeedback-Based-BCI/Images/IndoorScene"
 TIME_BETWEEN = 10
 CURRENT_FOLDER = "IndoorScene"
 
