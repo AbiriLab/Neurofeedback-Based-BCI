@@ -207,7 +207,7 @@ class RootWindow:
                 print(row_data)
                 
                 image_window.next_image()
-                for i in range(self.numberOfGetDataCalls):
+                for i in range(0, 4*self.numberOfGetDataCalls):
                     # Receives the configured number of samples from the Unicorn device and writes it to the acquisition buffer.
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
                     # Convert receive buffer to numpy float array 
