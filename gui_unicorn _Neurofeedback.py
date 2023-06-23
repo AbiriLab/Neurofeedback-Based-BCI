@@ -7,7 +7,7 @@ import numpy as np
 from image_display_unicorn import *
 import UnicornPy
 import random
-device = UnicornPy.Unicorn("UN-2021.05.37")
+device = UnicornPy.Unicorn("UN-2021.05.36")
 from scipy.signal import butter, filtfilt     
 ####################################################
 import os
@@ -295,7 +295,6 @@ class RootWindow:
                     for i in range(self.numberOfGetDataCalls): #looking at each image for 5 seconds
                         # Receives the configured number of samples from the Unicorn device and writes it to the acquisition buffer.
                         device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
-                        
                         # Convert receive buffer to numpy float array 
                         dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
                         # print('dataa', len(dataa))
@@ -393,7 +392,7 @@ class RootWindow:
                 
         image_window.pleaseWait_image()        
         del totdata
-        del combined_datadata
+        del combined_data
        
         self.update_gui()
         self.update_patient_data()
