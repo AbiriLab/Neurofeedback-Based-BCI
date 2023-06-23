@@ -279,15 +279,12 @@ class RootWindow:
         
         # for n in range(len(self.randomized_blocks)):
         excel_file_lable = pd.read_csv(f'Block{seq_list[self.block]}_key.csv')
-        
-        
-        totdata=[] 
-        for j in range (0,40):
-            
+         
+        for j in range (0,2):
                 row_data = excel_file_lable.iloc[j,[1, 2, 3]].to_numpy()
                 print(row_data)
                 image_window.next_image()
-               
+                totdata=[]
                 for n in range(0,5):
                     tdataarray=[]
                     tdata=[]
@@ -299,103 +296,68 @@ class RootWindow:
                         dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
                         # print('dataa', len(dataa))
                         data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength
-                        # Concatenate the row_data and data arrays
-                        # combined_data = np.concatenate((combined_data, key_data))
                         combined_data = np.concatenate((data, row_data))
                         tdata.append(combined_data)
                         tdataarray=np.array(tdata)
                         # print('tdataarray', tdataarray.shape)
                     totdata.append(tdataarray)
                     totdata_array=np.array(totdata)
-                    nn = totdata_array.shape[0]
+                    # nn = totdata_array.shape[0]
                     new_totdata_array = totdata_array.reshape(-1, 20)  # Reshape the array into 2D
                     print('totdata_arrayr', new_totdata_array.shape)
-                    #    
-                    # print('combined_data', combined_data.shape)
+                    
                     del tdataarray
                     del data
                     del tdata
-                    # column_names = ['FZ', 'FC1', 'FC2', 'C3', 'CZ', 'C4', 'CPZ', 'PZ', 'AccelX', 'AccelY', 'AccelZ', 'GyroX', 'GyroY', 'GyroZ',
-                    #                 'Battery', 'Sample', 'Unknown', 'Instruction', 'Female/Male', 'Outdoor/Indoor']
-                    # Combined_raw_eeg_nf = pd.DataFrame(tdataarray) 
-                    # Combined_raw_eeg_nf.columns = column_names
-                    # #Excluding the useless columns
-                    # columns_to_remove_nf = ['AccelX', 'AccelY', 'AccelZ', 'GyroX', 'GyroY', 'GyroZ', 'Battery', 'Sample', 'Unknown','Instruction','Female/Male', 'Outdoor/Indoor']
-                    # Combined_raw_eeg_nf = Combined_raw_eeg_nf.drop(columns=columns_to_remove_nf, axis=1)
-                    # # print('Combined_raw_eeg_nf', Combined_raw_eeg_nf.shape)    
-                                   
-                    # if Combined_raw_eeg_nf.shape[0] > 250:  
-                    #     Combined_raw_eeg_nf_bp = np.copy(Combined_raw_eeg_nf)
-                    #     num_columns_nf = Combined_raw_eeg_nf_bp.shape[1]
-                    #     for column in range(num_columns_nf):
-                    #         Combined_raw_eeg_nf_bp[:, column] = self.butter_bandpass_filter(Combined_raw_eeg_nf_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5)
-                        
-                        
-                    #     combined_raw_eeg_nf_bp_df=pd.DataFrame(Combined_raw_eeg_nf_bp)
-                    #     eeg_df_denoised_nf = self.preprocess(combined_raw_eeg_nf_bp_df, col_names=list(combined_raw_eeg_nf_bp_df.columns), n_clusters=[50]*len(combined_raw_eeg_nf_bp_df.columns))
-                    #     print( eeg_df_denoised_nf)
-                        
-                    #     # Lableing
-                    #     column_indices = {'Instruction': 17, 'Female/Male': 18, 'Outdoor/Indoor': 19}
-                    #     selected_columns = [column_indices['Instruction'], column_indices['Female/Male'], column_indices['Outdoor/Indoor']]
-                    #     data_im_ins_nf = tdataarray[:, selected_columns]
-                    #     denoised_im_ins_nf = np.concatenate((eeg_df_denoised_nf, data_im_ins_nf), axis=1)
-
-                    #     # Check the third last column (column 9) and keep rows if column 9 is equal to 1
-                    #     filtered_denoised_im_ins_nf = denoised_im_ins_nf[(denoised_im_ins_nf[:, -3] == denoised_im_ins_nf[:, -2]) | (denoised_im_ins_nf[:, -3] == denoised_im_ins_nf[:, -1])]
-                    #     filtered_denoised_im_ins_df_nf = pd.DataFrame(filtered_denoised_im_ins_nf)
-
-                    #     # Create a new column 'event'
-                    #     filtered_denoised_im_ins_df_nf['event'] = ''
-                    #     for index, row in filtered_denoised_im_ins_df_nf.iterrows():
-                    #         if row.iloc[-4] == 'F' or row.iloc[-4] == 'M':
-                    #             filtered_denoised_im_ins_df_nf.at[index, 'event'] = '0'
-                    #         elif row.iloc[-4] == 'I' or row.iloc[-4] == 'O':
-                    #             filtered_denoised_im_ins_df_nf.at[index, 'event'] = '1'
-                                
-                    #     selected_data_nf = filtered_denoised_im_ins_df_nf.iloc[:, :8]  
-                    #     lable_nf=filtered_denoised_im_ins_df_nf.iloc[:, -1:]
-                        
-                    #     selected_data_nf_array = np.array(selected_data_nf)
-                    #     lable_nf_array= np.array(lable_nf)                    
-                                
-                    #     with open('selected_data_nf_array_'+str(image_window.curr_block)+'.csv', 'w', newline='') as csvfile:
-                    #         writer = csv.writer(csvfile)
-                    #         for row in selected_data_nf_array:
-                    #             writer.writerow(row)
-                                
-                    #     with open('lable_nf_array_'+str(image_window.curr_block)+'.csv', 'w', newline='') as csvfile:
-                    #         writer = csv.writer(csvfile)
-                    #         for row in lable_nf_array:
-                    #             writer.writerow(row)
                     
-                    #     del Combined_raw_eeg_nf_bp
-                    #     del combined_raw_eeg_nf_bp_df
-                    #     del eeg_df_denoised_nf
-                    #     del data_im_ins_nf
-                    #     del denoised_im_ins_nf 
-                    #     del filtered_denoised_im_ins_nf
-                    #     del filtered_denoised_im_ins_df_nf
-                    #     del selected_data_nf
-                    #     del lable_nf
-                    #     del selected_data_nf_array
-                    #     del lable_nf_array
+                    column_names = ['FZ', 'FC1', 'FC2', 'C3', 'CZ', 'C4', 'CPZ', 'PZ', 'AccelX', 'AccelY', 'AccelZ', 'GyroX', 'GyroY', 'GyroZ',
+                                  'Battery', 'Sample', 'Unknown', 'Instruction', 'Female/Male', 'Outdoor/Indoor']
+                    Combined_raw_eeg_nf = pd.DataFrame(new_totdata_array) 
+                    Combined_raw_eeg_nf.columns = column_names
+                    #Excluding the useless columns
+                    columns_to_remove_nf = ['AccelX', 'AccelY', 'AccelZ', 'GyroX', 'GyroY', 'GyroZ', 'Battery', 'Sample', 'Unknown','Instruction','Female/Male', 'Outdoor/Indoor']
+                    Combined_raw_eeg_nf = Combined_raw_eeg_nf.drop(columns=columns_to_remove_nf, axis=1)
+                    print('Combined_raw_eeg_nf', Combined_raw_eeg_nf.shape)    
+                                   
+                    Combined_raw_eeg_nf_bp = np.copy(Combined_raw_eeg_nf)
+                    num_columns_nf = Combined_raw_eeg_nf_bp.shape[1]
+                    for column in range(num_columns_nf):
+                        Combined_raw_eeg_nf_bp[:, column] = self.butter_bandpass_filter(Combined_raw_eeg_nf_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5)    
+                    combined_raw_eeg_nf_bp_df=pd.DataFrame(Combined_raw_eeg_nf_bp)
+                    eeg_df_denoised_nf = self.preprocess(combined_raw_eeg_nf_bp_df, col_names=list(combined_raw_eeg_nf_bp_df.columns), n_clusters=[50]*len(combined_raw_eeg_nf_bp_df.columns))
+                    # print('eeg_df_denoised_nf', eeg_df_denoised_nf)
                         
-                            
-                # with open('raw_eeg_data_'+str(image_window.curr_block)+'.csv', 'w', newline='') as csvfile:
-                #     writer = csv.writer(csvfile)
-                #     for row in tdataarray:
-                #         writer.writerow(row)                                         
-                    # print('n', n)
+                    # Lableing
+                    column_indices = {'Instruction': 17, 'Female/Male': 18, 'Outdoor/Indoor': 19}
+                    selected_columns = [column_indices['Instruction'], column_indices['Female/Male'], column_indices['Outdoor/Indoor']]
+                    data_im_ins_nf = new_totdata_array[:, selected_columns]
+                    denoised_im_ins_nf = np.concatenate((eeg_df_denoised_nf, data_im_ins_nf), axis=1)
+                    # print('denoised_im_ins_nf', denoised_im_ins_nf.shape, denoised_im_ins_nf)
+                    denoised_im_ins_nf_df=pd.DataFrame(denoised_im_ins_nf)
+
+
+                    # Create a new column 'event'
+                    denoised_im_ins_nf_df['event'] = ''
+                    for index, row in denoised_im_ins_nf_df.iterrows():
+                        if row.iloc[-4] == 'F' or row.iloc[-4] == 'M':
+                            denoised_im_ins_nf_df.at[index, 'event'] = '0'
+                        elif row.iloc[-4] == 'I' or row.iloc[-4] == 'O':
+                            denoised_im_ins_nf_df.at[index, 'event'] = '1'
+                                
+                    selected_data_nf = denoised_im_ins_nf_df.iloc[:, :8]  
+                    lable_nf=denoised_im_ins_nf_df.iloc[:, -1:]
+                        
+                    selected_data_nf_array = np.array(selected_data_nf)
+                    lable_nf_array= np.array(lable_nf)     
+                    print('selected_data_nf_array', selected_data_nf_array)    
                 print('j',j)
-              
-                
+
+                del totdata 
+                del combined_data    
+        
         image_window.pleaseWait_image()        
-        del totdata
-        del combined_data
-       
         self.update_gui()
-        self.update_patient_data()
+        self.update_patient_data() 
         device.StopAcquisition() 
    
     ################################################################################################################################    
