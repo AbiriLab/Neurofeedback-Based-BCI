@@ -326,7 +326,7 @@ class RootWindow:
                     combined_raw_eeg_nf_bp_df=pd.DataFrame(Combined_raw_eeg_nf_bp)
                     eeg_df_denoised_nf = self.preprocess(combined_raw_eeg_nf_bp_df, col_names=list(combined_raw_eeg_nf_bp_df.columns), n_clusters=[50]*len(combined_raw_eeg_nf_bp_df.columns))
                     # print('eeg_df_denoised_nf', eeg_df_denoised_nf)
-                        
+                        #lkdnm
                     # Lableing
                     column_indices = {'Instruction': 17, 'Female/Male': 18, 'Outdoor/Indoor': 19}
                     selected_columns = [column_indices['Instruction'], column_indices['Female/Male'], column_indices['Outdoor/Indoor']]
