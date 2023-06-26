@@ -40,6 +40,7 @@ import joblib
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from scipy.signal import hilbert
+from scipy import stats
 
 
 class RootWindow:
@@ -273,19 +274,14 @@ class RootWindow:
     def start_trial(self):
         global image_window, top
         seq_list = [int(x) for x in self.seq if x.isdigit()]
-        print(seq_list)
-        print('Block',self.block)
-        print('randomized_blocks:',seq_list[self.block])
+        # print(seq_list)
+        # print('Block',self.block)
+        # print('randomized_blocks:',seq_list[self.block])
         image_window.instructions_image()
         top.update()
         device.StartAcquisition(False)
         
-        instruction_duration_samples = 250 * 5
-        instruction_samples_collected = 0
-        while instruction_samples_collected < instruction_duration_samples:
-            device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
-            instruction_samples_collected += self.FrameLength
-
+       
         # Load the trained SVM model
         filename = r'C:\Users\tnlab\OneDrive\Documents\GitHub\Neurofeedback-Based-BCI\my_svm_model.joblib'
         svm_model = joblib.load(filename)
@@ -295,15 +291,10 @@ class RootWindow:
         samples_per_second = 250  # Assumed based on your description
         buffer_size_samples = buffer_size_seconds * samples_per_second
         buffer = np.zeros((buffer_size_samples, 8))  # 8 is the number of EEG channels
-        
-        
-        # Initialize PCA and StandardScaler
-        scaler = StandardScaler()
-        pca = PCA(n_components=400)  # specify number of components
 
         excel_file_lable = pd.read_csv(f'Block{seq_list[self.block]}_key.csv')
         
-        for j in range (0,1):
+        for j in range (0,10):
                 row_data = excel_file_lable.iloc[j,[1, 2, 3]].to_numpy()
                 # print(row_data)
                 image_window.next_image()
@@ -320,7 +311,7 @@ class RootWindow:
                     totdata.append(tdataarray)
                     totdata_array=np.array(totdata)
                     new_totdata_array = totdata_array.reshape(-1, 20)  # Reshape the array into 2D
-                    print('new_totdata_array',new_totdata_array.shape)
+                    # print('new_totdata_array',new_totdata_array.shape)
                     del tdata
         
                     Combined_raw_eeg_df = pd.DataFrame(new_totdata_array) 
@@ -330,10 +321,10 @@ class RootWindow:
                     for column in range(num_columns_nf):
                         Combined_raw_eeg_nf_bp[:, column] = self.butter_bandpass_filter(Combined_raw_eeg_nf_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5)    
                     combined_raw_eeg_nf_bp=pd.DataFrame(Combined_raw_eeg_nf_bp)
-                    print('combined_raw_eeg_nf_bp_df', combined_raw_eeg_nf_bp.shape)
+                    # print('combined_raw_eeg_nf_bp_df', combined_raw_eeg_nf_bp.shape)
                     # print(list(combined_raw_eeg_nf_bp.columns))
                     eeg_df_denoised_nf = self.preprocess(combined_raw_eeg_nf_bp, col_names=list(combined_raw_eeg_nf_bp.columns), n_clusters=[50]*len(combined_raw_eeg_nf_bp.columns))
-                    print('eeg_df_denoised_nf', eeg_df_denoised_nf.shape)
+                    # print('eeg_df_denoised_nf', eeg_df_denoised_nf.shape)
                     # print(type(eeg_df_denoised_nf)), #<class 'pandas.core.frame.DataFrame'>
                     denoised_data = eeg_df_denoised_nf.to_numpy()
                     last_samples = denoised_data[-250:]
@@ -346,44 +337,31 @@ class RootWindow:
                         buffer = last_samples[-buffer_size_samples:, :]        
                     # print('Buffer shape:', buffer.shape)   
                     # print('Buffer:', buffer)
+                    # print('buffer type:', type(buffer))
+                   
                     chunks = np.array_split(buffer, 4, axis=0)
-                    print('chunks', chunks)
-                      
-                    # print(len(chunks))
-                    
-                    
+                    print('chunks', len(chunks)) 
+                    print(chunks[1].shape)
+                    feature=[]
+                    scaler = StandardScaler()
                     for chunk in chunks: 
-                        # print(chunk.shape)
-                        # Preprocess the chunk 
-                        chunk_reshaped = chunk.reshape(-1,2000)
-                        # print(chunk_reshaped.shape)
-                        # print('chunk_reshaped', chunk_reshaped)
-                        
-                        chunk_standardized = scaler.fit_transform(chunk_reshaped)
-                        print('chunk_standardized', chunk_standardized)
-                        
-                        pca.fit(chunk_standardized)
-                        # eeg_data_pca = pca.transform(chunk_standardized)
-                        # print('eeg_data_pca',eeg_data_pca.shape)
-                        
-                        # # Hilbert feature extraction
-                        
-                        # analytic_signal = hilbert(chunk_pca)
-                        # envelope = np.abs(analytic_signal)
-                        # envelope=np.hstack((envelope, chunk_pca))
-                        # print('envelope',envelope.shape)
-
-                        # # selected_dataf=selected_data
-                        # print(envelope.shape)
-                        # buffer_flattened = envelope.flatten().reshape(1, -1)  
-                        # prediction = svm_model.predict(buffer_flattened)
-                        # predictions.append(prediction[0])
-                        # print('Prediction:', prediction)
-                    
-                    # counter = Counter(predictions)  
-                    # most_common_prediction = counter.most_common(1)[0][0]
-                    # print('Most common prediction:', most_common_prediction)
-                    
+                        analytic_signal = hilbert(chunk)
+                        envelope = np.abs(analytic_signal)
+                        envelope=np.hstack((envelope, chunk))
+                        envelop_standardized = scaler.fit_transform(envelope)
+                        envelop_standardized_tr=envelop_standardized.transpose()
+                        pca = PCA(n_components=16)  # how many components you want to keep
+                        pca.fit(envelop_standardized_tr)
+                        eeg_data_pca = pca.transform(envelop_standardized_tr)
+                        print(eeg_data_pca.shape)
+                        feature.append(eeg_data_pca)
+                    # print(len(feature))
+                    feature_array=np.array(feature)
+                    X_n=feature_array.reshape(-1,16*16)
+                    print(X_n.shape)
+                    predictions =svm_model.predict(X_n)
+                    most_common_prediction = stats.mode(predictions)
+                    print("Most common prediction:", most_common_prediction[0])
                 print('j',j)
                 del totdata 
 
