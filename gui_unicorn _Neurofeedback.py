@@ -7,7 +7,7 @@ import numpy as np
 from image_display_unicorn import *
 import UnicornPy
 import random
-device = UnicornPy.Unicorn("UN-2021.05.36")
+device = UnicornPy.Unicorn("UN-2021.05.37")
 from scipy.signal import butter, filtfilt     
 ####################################################
 import os
@@ -33,14 +33,21 @@ from sklearn.metrics import accuracy_score, classification_report
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from tensorflow.keras.layers import Dense,  BatchNormalization, Dropout
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
-
+##############
+from sklearn.svm import SVC
+from collections import Counter
+import joblib
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from scipy.signal import hilbert
 
 
 class RootWindow:
     
     def __init__(self, master):
+
         self.SamplingRate = UnicornPy.SamplingRate
-        self.SerialNumber = 'UN-2021.05.36'
+        self.SerialNumber = 'UN-2021.05.37'
         self.numberOfAcquiredChannels = device.GetNumberOfAcquiredChannels()
         self.configuration = device.GetConfiguration()
         self.AcquisitionDurationInSeconds = 1 
@@ -226,7 +233,9 @@ class RootWindow:
     # Denoising 
     def denoise_data(self, df, col_names, n_clusters):
         df_denoised = df.copy()
+        df_denoised.reset_index(drop=True, inplace=True)
         for col_name, k in zip(col_names, n_clusters):
+            # print(f"Processing column {col_name}")
             df_denoised[col_name] = pd.to_numeric(df_denoised[col_name], errors='coerce') # Convert column to numeric format
             X = df_denoised.select_dtypes(include=['float64', 'int64']) # Select only numeric columns
             clf = KNeighborsRegressor(n_neighbors=k, weights='uniform') # Fit KNeighborsRegressor
@@ -276,85 +285,108 @@ class RootWindow:
         while instruction_samples_collected < instruction_duration_samples:
             device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
             instruction_samples_collected += self.FrameLength
+
+        # Load the trained SVM model
+        filename = r'C:\Users\tnlab\OneDrive\Documents\GitHub\Neurofeedback-Based-BCI\my_svm_model.joblib'
+        svm_model = joblib.load(filename)
         
-        # for n in range(len(self.randomized_blocks)):
+        # Initialize the buffer
+        buffer_size_seconds = 4
+        samples_per_second = 250  # Assumed based on your description
+        buffer_size_samples = buffer_size_seconds * samples_per_second
+        buffer = np.zeros((buffer_size_samples, 8))  # 8 is the number of EEG channels
+        
+        
+        # Initialize PCA and StandardScaler
+        scaler = StandardScaler()
+        pca = PCA(n_components=400)  # specify number of components
+
         excel_file_lable = pd.read_csv(f'Block{seq_list[self.block]}_key.csv')
-         
-        for j in range (0,2):
+        
+        for j in range (0,1):
                 row_data = excel_file_lable.iloc[j,[1, 2, 3]].to_numpy()
-                print(row_data)
+                # print(row_data)
                 image_window.next_image()
                 totdata=[]
                 for n in range(0,5):
-                    tdataarray=[]
                     tdata=[]
-                    data=[] 
                     for i in range(self.numberOfGetDataCalls): #looking at each image for 5 seconds
-                        # Receives the configured number of samples from the Unicorn device and writes it to the acquisition buffer.
                         device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
-                        # Convert receive buffer to numpy float array 
                         dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
-                        # print('dataa', len(dataa))
                         data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength
                         combined_data = np.concatenate((data, row_data))
                         tdata.append(combined_data)
                         tdataarray=np.array(tdata)
-                        # print('tdataarray', tdataarray.shape)
                     totdata.append(tdataarray)
                     totdata_array=np.array(totdata)
-                    # nn = totdata_array.shape[0]
                     new_totdata_array = totdata_array.reshape(-1, 20)  # Reshape the array into 2D
-                    print('totdata_arrayr', new_totdata_array.shape)
-                    
-                    del tdataarray
-                    del data
+                    print('new_totdata_array',new_totdata_array.shape)
                     del tdata
-                    
-                    column_names = ['FZ', 'FC1', 'FC2', 'C3', 'CZ', 'C4', 'CPZ', 'PZ', 'AccelX', 'AccelY', 'AccelZ', 'GyroX', 'GyroY', 'GyroZ',
-                                  'Battery', 'Sample', 'Unknown', 'Instruction', 'Female/Male', 'Outdoor/Indoor']
-                    Combined_raw_eeg_nf = pd.DataFrame(new_totdata_array) 
-                    Combined_raw_eeg_nf.columns = column_names
-                    #Excluding the useless columns
-                    columns_to_remove_nf = ['AccelX', 'AccelY', 'AccelZ', 'GyroX', 'GyroY', 'GyroZ', 'Battery', 'Sample', 'Unknown','Instruction','Female/Male', 'Outdoor/Indoor']
-                    Combined_raw_eeg_nf = Combined_raw_eeg_nf.drop(columns=columns_to_remove_nf, axis=1)
-                    print('Combined_raw_eeg_nf', Combined_raw_eeg_nf.shape)    
-                                   
+        
+                    Combined_raw_eeg_df = pd.DataFrame(new_totdata_array) 
+                    Combined_raw_eeg_nf = Combined_raw_eeg_df.iloc[:, :8]
                     Combined_raw_eeg_nf_bp = np.copy(Combined_raw_eeg_nf)
                     num_columns_nf = Combined_raw_eeg_nf_bp.shape[1]
                     for column in range(num_columns_nf):
                         Combined_raw_eeg_nf_bp[:, column] = self.butter_bandpass_filter(Combined_raw_eeg_nf_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5)    
-                    combined_raw_eeg_nf_bp_df=pd.DataFrame(Combined_raw_eeg_nf_bp)
-                    eeg_df_denoised_nf = self.preprocess(combined_raw_eeg_nf_bp_df, col_names=list(combined_raw_eeg_nf_bp_df.columns), n_clusters=[50]*len(combined_raw_eeg_nf_bp_df.columns))
-                    # print('eeg_df_denoised_nf', eeg_df_denoised_nf)
-                        #lkdnm
-                    # Lableing
-                    column_indices = {'Instruction': 17, 'Female/Male': 18, 'Outdoor/Indoor': 19}
-                    selected_columns = [column_indices['Instruction'], column_indices['Female/Male'], column_indices['Outdoor/Indoor']]
-                    data_im_ins_nf = new_totdata_array[:, selected_columns]
-                    denoised_im_ins_nf = np.concatenate((eeg_df_denoised_nf, data_im_ins_nf), axis=1)
-                    # print('denoised_im_ins_nf', denoised_im_ins_nf.shape, denoised_im_ins_nf)
-                    denoised_im_ins_nf_df=pd.DataFrame(denoised_im_ins_nf)
-
-
-                    # Create a new column 'event'
-                    denoised_im_ins_nf_df['event'] = ''
-                    for index, row in denoised_im_ins_nf_df.iterrows():
-                        if row.iloc[-4] == 'F' or row.iloc[-4] == 'M':
-                            denoised_im_ins_nf_df.at[index, 'event'] = '0'
-                        elif row.iloc[-4] == 'I' or row.iloc[-4] == 'O':
-                            denoised_im_ins_nf_df.at[index, 'event'] = '1'
-                                
-                    selected_data_nf = denoised_im_ins_nf_df.iloc[:, :8]  
-                    lable_nf=denoised_im_ins_nf_df.iloc[:, -1:]
+                    combined_raw_eeg_nf_bp=pd.DataFrame(Combined_raw_eeg_nf_bp)
+                    print('combined_raw_eeg_nf_bp_df', combined_raw_eeg_nf_bp.shape)
+                    # print(list(combined_raw_eeg_nf_bp.columns))
+                    eeg_df_denoised_nf = self.preprocess(combined_raw_eeg_nf_bp, col_names=list(combined_raw_eeg_nf_bp.columns), n_clusters=[50]*len(combined_raw_eeg_nf_bp.columns))
+                    print('eeg_df_denoised_nf', eeg_df_denoised_nf.shape)
+                    # print(type(eeg_df_denoised_nf)), #<class 'pandas.core.frame.DataFrame'>
+                    denoised_data = eeg_df_denoised_nf.to_numpy()
+                    last_samples = denoised_data[-250:]
+                    if len(last_samples) <= buffer_size_samples:
+                        buffer = np.append(buffer, last_samples, axis=0)
+                        if buffer.shape[0] > buffer_size_samples:
+                            num_extra_samples = buffer.shape[0] - buffer_size_samples
+                            buffer = buffer[num_extra_samples:, :]
+                    else:
+                        buffer = last_samples[-buffer_size_samples:, :]        
+                    # print('Buffer shape:', buffer.shape)   
+                    # print('Buffer:', buffer)
+                    chunks = np.array_split(buffer, 4, axis=0)
+                    print('chunks', chunks)
+                      
+                    # print(len(chunks))
+                    
+                    
+                    for chunk in chunks: 
+                        # print(chunk.shape)
+                        # Preprocess the chunk 
+                        chunk_reshaped = chunk.reshape(-1,2000)
+                        # print(chunk_reshaped.shape)
+                        # print('chunk_reshaped', chunk_reshaped)
                         
-                    selected_data_nf_array = np.array(selected_data_nf)
-                    lable_nf_array= np.array(lable_nf)     
-                    print('selected_data_nf_array', selected_data_nf_array)    
-                print('j',j)
+                        chunk_standardized = scaler.fit_transform(chunk_reshaped)
+                        print('chunk_standardized', chunk_standardized)
+                        
+                        pca.fit(chunk_standardized)
+                        # eeg_data_pca = pca.transform(chunk_standardized)
+                        # print('eeg_data_pca',eeg_data_pca.shape)
+                        
+                        # # Hilbert feature extraction
+                        
+                        # analytic_signal = hilbert(chunk_pca)
+                        # envelope = np.abs(analytic_signal)
+                        # envelope=np.hstack((envelope, chunk_pca))
+                        # print('envelope',envelope.shape)
 
+                        # # selected_dataf=selected_data
+                        # print(envelope.shape)
+                        # buffer_flattened = envelope.flatten().reshape(1, -1)  
+                        # prediction = svm_model.predict(buffer_flattened)
+                        # predictions.append(prediction[0])
+                        # print('Prediction:', prediction)
+                    
+                    # counter = Counter(predictions)  
+                    # most_common_prediction = counter.most_common(1)[0][0]
+                    # print('Most common prediction:', most_common_prediction)
+                    
+                print('j',j)
                 del totdata 
-                del combined_data    
-        
+
         image_window.pleaseWait_image()        
         self.update_gui()
         self.update_patient_data() 
