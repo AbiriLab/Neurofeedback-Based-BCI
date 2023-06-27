@@ -4,7 +4,7 @@ from tkinter import *
 import csv
 import pandas as pd
 import numpy as np
-from image_display_unicorn import *
+from image_display_unicorn_NF import *
 import UnicornPy
 import random
 device = UnicornPy.Unicorn("UN-2021.05.37")
@@ -41,12 +41,14 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from scipy.signal import hilbert
 from scipy import stats
+##################################
+from os import listdir
+from PIL import Image, ImageDraw, ImageFilter
 
 
 class RootWindow:
     
     def __init__(self, master):
-
         self.SamplingRate = UnicornPy.SamplingRate
         self.SerialNumber = 'UN-2021.05.37'
         self.numberOfAcquiredChannels = device.GetNumberOfAcquiredChannels()
@@ -68,7 +70,7 @@ class RootWindow:
         self.post_eval = 0
         self.seq = None
         self.top = None
-        self.r = [1, 2, 3, 4, 5, 6, 7, 8]
+        self.r = [1, 2, 3, 4, 5, 6]
         self.key_pressed = False
         
         master.bind('<KeyPress>', self.key_press)
@@ -218,6 +220,14 @@ class RootWindow:
     #Neurofeedback 
     
     
+        
+        
+        
+    
+    
+    
+    
+    
     def butter_bandpass(self, lowcut, highcut, fs, order=5):
         nyq = 0.5 * fs
         low = lowcut / nyq
@@ -274,6 +284,7 @@ class RootWindow:
     def start_trial(self):
         global image_window, top
         seq_list = [int(x) for x in self.seq if x.isdigit()]
+
         # print(seq_list)
         # print('Block',self.block)
         # print('randomized_blocks:',seq_list[self.block])
@@ -294,9 +305,93 @@ class RootWindow:
 
         excel_file_lable = pd.read_csv(f'Block{seq_list[self.block]}_key.csv')
         
-        for j in range (0,10):
+        for j in range (0,40):
+            #Creating composite images
+            Block = '6'
+
+            # For faces
+            ffaces = []
+            folder_dir = os.getcwd() + "/Images/1-Neurofeedback/Face"
+            print('ffolder_dir', folder_dir)
+            for image in os.listdir(folder_dir):
+                ffaces.append(folder_dir + "/" + image)
+
+            # For scenes
+            sscenes = []
+            folder_dir = os.getcwd() + "/Images/1-Neurofeedback/Scene"
+            print('sfolder_dir', folder_dir)
+            for image in os.listdir(folder_dir):
+                sscenes.append(folder_dir + "/" + image)
+            # face blocks
+            
+            m=None
+            for n in range(6):
+                random.shuffle(ffaces)
+                random.shuffle(sscenes)
+                Block = str(n+1)
+                instructions = []
+                faces = []
+                scenes = []
+                fcount = 0
+                scount = 0
+                
+                composite_images = []
+                for i in range(40) :
+                    if n==0 or n==2 or n==4:
+                        m='Face'
+                    if n==1 or n==3 or n==5:
+                        m='Scene'
+                    
+                    instructions.append(m)
+                    fcount = fcount + 1
+                    f_img = Image.open(ffaces[fcount]).convert('L')
+                    faces.append('F')
+                    
+                    scount = scount + 1 
+                    s_img = Image.open(sscenes[scount]).convert('L')
+                    scenes.append('S')
+                    
+                    # Create masks with different transparencies
+                    very_low_mask_f = Image.new("L", f_img.size, 255)
+                    low_mask_f = Image.new("L", f_img.size, 192)
+                    normal_mask_f = Image.new("L", f_img.size, 128)
+                    good_mask_f = Image.new("L", f_img.size, 64)
+                    very_good_mask_f = Image.new("L", f_img.size, 0)
+                
+                    mask = Image.new("L", f_img.size, 128)
+                    im = Image.composite(f_img, s_img, normal_mask_f) # composite greyscale images using mask
+                    composite_images.append(im)
+                    
+                temp = list(zip(composite_images, faces, scenes))
+                random.shuffle(temp)
+                s_composite_images, s_faces, s_scenes = zip(*temp)
+                s_composite_images, s_faces, s_scenes = list(s_composite_images), list(s_faces), list(s_scenes)
+                
+                save_dir = os.path.join('Images', '1-Neurofeedback', 'Composite_Images')
+                if not os.path.exists(save_dir):
+                    os.makedirs(save_dir)
+
+                # Continue with the code:
+                for i in range(len(s_composite_images)):
+                    s_composite_images[i].save(os.path.join(save_dir, "{}.jpg".format(i)))
+                
+                data = {'Instructions': instructions, 'Face': s_faces, 'Scene': s_scenes}
+                image_key = pd.DataFrame(data)
+                image_key.to_csv('Images/1-Neurofeedback/Composite_Images' + Block + '_key.csv')
+                del instructions
+                del faces
+                del scenes
+                del composite_images
+                del s_faces
+                del s_scenes
+                del s_composite_images
+                del data
+                del image_key
+                del temp            
+            
+            
                 row_data = excel_file_lable.iloc[j,[1, 2, 3]].to_numpy()
-                # print(row_data)
+                print(row_data)
                 image_window.next_image()
                 totdata=[]
                 for n in range(0,5):
@@ -362,6 +457,7 @@ class RootWindow:
                     predictions =svm_model.predict(X_n)
                     most_common_prediction = stats.mode(predictions)
                     print("Most common prediction:", most_common_prediction[0])
+                    
                 print('j',j)
                 del totdata 
 
