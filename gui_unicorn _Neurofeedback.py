@@ -62,7 +62,7 @@ class RootWindow:
         self.image_window = None
         self.block = 0
         self.image_window_open = False
-        self.patient_progress = ['', '0', '0', '0', '00000000']
+        self.patient_progress = ['', '0', '0', '0', '000000']
         self.patient_index = 0
         self.patient_data_list = []
         self.pre_eval = 0
@@ -72,6 +72,7 @@ class RootWindow:
         self.top = None
         self.r = [1, 2, 3, 4, 5, 6]
         self.key_pressed = False
+        self.instruction_mapping = {1: 'Face', 2: 'Scene', 3: 'Face', 4: 'Scene', 5: 'Face', 6: 'Scene'}
         
         master.bind('<KeyPress>', self.key_press)
         with open('pat_progess_v2.csv', 'r') as file:
@@ -138,7 +139,8 @@ class RootWindow:
 
         self.single_block = tk.Label(self.frame_3, text="Single Block", font=8)
         self.single_block.grid(row=2, column=0, pady=5, padx=3)
-        blist = ["1", "2", "3", "4", "5", "6", "7", "8"]
+        # blist = ["1", "2", "3", "4", "5", "6", "7", "8"]
+        blist = ["1", "2", "3", "4", "5", "6"]
         self.single_block_num_var = IntVar()
         self.block_box = ttk.Combobox(self.frame_3, values=blist, state='readonly', font=10,
                                       textvariable=self.single_block_num_var, width=12)
@@ -207,6 +209,7 @@ class RootWindow:
         # print(list(self.seq.replace(" ", "")))
         image_window = DisplayImage(top, self.block, list(self.seq.replace(" ", "")))
         image_window.single_block = False
+        image_window.create_instruct_order()
         image_window.create_img_arr()
         image_window.pleaseWait_image()
         self.image_window_open = True
@@ -218,16 +221,7 @@ class RootWindow:
     ################################################################################################################################
     ################################################################################################################################   
     #Neurofeedback 
-    
-    
-        
-        
-        
-    
-    
-    
-    
-    
+
     def butter_bandpass(self, lowcut, highcut, fs, order=5):
         nyq = 0.5 * fs
         low = lowcut / nyq
@@ -284,183 +278,98 @@ class RootWindow:
     def start_trial(self):
         global image_window, top
         seq_list = [int(x) for x in self.seq if x.isdigit()]
-
-        # print(seq_list)
-        # print('Block',self.block)
-        # print('randomized_blocks:',seq_list[self.block])
+        print(seq_list)
+        print('Block',self.block)
+        print('randomized_blocks:',seq_list[self.block])
         image_window.instructions_image()
         top.update()
+        time.sleep(5)
         device.StartAcquisition(False)
-        
+        # instruction = self.instruction_mapping[seq_list[self.block]]
        
         # Load the trained SVM model
         filename = r'C:\Users\tnlab\OneDrive\Documents\GitHub\Neurofeedback-Based-BCI\my_svm_model.joblib'
         svm_model = joblib.load(filename)
         
         # Initialize the buffer
-        buffer_size_seconds = 4
+        buffer_size_seconds = 5
         samples_per_second = 250  # Assumed based on your description
         buffer_size_samples = buffer_size_seconds * samples_per_second
         buffer = np.zeros((buffer_size_samples, 8))  # 8 is the number of EEG channels
+        face_alpha_values = [0,70,128,204,255] 
+        face_alpha_index=2
+        # face_alpha = 128
+         
+        for j in range (0,5):
+            image_window.start_new_trial()
 
-        excel_file_lable = pd.read_csv(f'Block{seq_list[self.block]}_key.csv')
-        
-        for j in range (0,40):
-            #Creating composite images
-            Block = '6'
-
-            # For faces
-            ffaces = []
-            folder_dir = os.getcwd() + "/Images/1-Neurofeedback/Face"
-            print('ffolder_dir', folder_dir)
-            for image in os.listdir(folder_dir):
-                ffaces.append(folder_dir + "/" + image)
-
-            # For scenes
-            sscenes = []
-            folder_dir = os.getcwd() + "/Images/1-Neurofeedback/Scene"
-            print('sfolder_dir', folder_dir)
-            for image in os.listdir(folder_dir):
-                sscenes.append(folder_dir + "/" + image)
-            # face blocks
-            
-            m=None
-            for n in range(6):
-                random.shuffle(ffaces)
-                random.shuffle(sscenes)
-                Block = str(n+1)
-                instructions = []
-                faces = []
-                scenes = []
-                fcount = 0
-                scount = 0
+            for n in range(0,5): 
+                tdata=[]
+                for i in range(self.numberOfGetDataCalls): #looking at each image for 5 seconds
+                    device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
+                    dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
+                    data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength
+                    tdata.append(data)
+                    tdataarray=np.array(tdata)
+                new_totdata_array = tdataarray.reshape(-1, 17)  # Reshape the array into 2D
+                Last_data=new_totdata_array[:, :8]
+                buffer = np.append(buffer, Last_data, axis=0)
+                if buffer.shape[0] > buffer_size_samples:
+                    num_extra_samples = buffer.shape[0] - buffer_size_samples
+                    buffer = buffer[num_extra_samples:, :]
+                else:
+                    buffer = Last_data[-buffer_size_samples:, :]        
+                print('j',j, 'n',n)                     
+                Combined_raw_eeg_nf_bp = np.copy(buffer)
+                num_columns_nf = buffer.shape[1]
+                for column in range(num_columns_nf):
+                    Combined_raw_eeg_nf_bp[:, column] = self.butter_bandpass_filter(Combined_raw_eeg_nf_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5)    
+                combined_raw_eeg_nf_bp=pd.DataFrame(Combined_raw_eeg_nf_bp)
+                eeg_df_denoised_nf = self.preprocess(combined_raw_eeg_nf_bp, col_names=list(combined_raw_eeg_nf_bp.columns), n_clusters=[50]*len(combined_raw_eeg_nf_bp.columns))
+                denoised_data = eeg_df_denoised_nf.to_numpy()
+                chunks = np.array_split(denoised_data, 5, axis=0)
+                feature=[]
+                scaler = StandardScaler()
+                analytic_signal = hilbert(chunks[4])
+                envelope = np.abs(analytic_signal)
+                envelope=np.hstack((envelope, chunks[4]))
+                envelop_standardized = scaler.fit_transform(envelope)
+                envelop_standardized_tr=envelop_standardized.transpose()
+                pca = PCA(n_components=16)  # how many components you want to keep
+                pca.fit(envelop_standardized_tr)
+                eeg_data_pca = pca.transform(envelop_standardized_tr)
+                feature.append(eeg_data_pca)
+                feature_array=np.array(feature)
+                X_n=feature_array.reshape(-1,16*16)
+                predictions =svm_model.predict(X_n)
+                print('predictions', predictions)
+                # Check if the prediction was correct
+                instruction = self.instruction_mapping[seq_list[self.block]]
+                correct_prediction = (instruction == 'Face' and predictions[0] == 0) or (instruction == 'Scene' and predictions[0] == 1)
                 
-                composite_images = []
-                for i in range(40) :
-                    if n==0 or n==2 or n==4:
-                        m='Face'
-                    if n==1 or n==3 or n==5:
-                        m='Scene'
-                    
-                    instructions.append(m)
-                    fcount = fcount + 1
-                    f_img = Image.open(ffaces[fcount]).convert('L')
-                    faces.append('F')
-                    
-                    scount = scount + 1 
-                    s_img = Image.open(sscenes[scount]).convert('L')
-                    scenes.append('S')
-                    
-                    # Create masks with different transparencies
-                    very_low_mask_f = Image.new("L", f_img.size, 255)
-                    low_mask_f = Image.new("L", f_img.size, 192)
-                    normal_mask_f = Image.new("L", f_img.size, 128)
-                    good_mask_f = Image.new("L", f_img.size, 64)
-                    very_good_mask_f = Image.new("L", f_img.size, 0)
-                
-                    mask = Image.new("L", f_img.size, 128)
-                    im = Image.composite(f_img, s_img, normal_mask_f) # composite greyscale images using mask
-                    composite_images.append(im)
-                    
-                temp = list(zip(composite_images, faces, scenes))
-                random.shuffle(temp)
-                s_composite_images, s_faces, s_scenes = zip(*temp)
-                s_composite_images, s_faces, s_scenes = list(s_composite_images), list(s_faces), list(s_scenes)
-                
-                save_dir = os.path.join('Images', '1-Neurofeedback', 'Composite_Images')
-                if not os.path.exists(save_dir):
-                    os.makedirs(save_dir)
-
-                # Continue with the code:
-                for i in range(len(s_composite_images)):
-                    s_composite_images[i].save(os.path.join(save_dir, "{}.jpg".format(i)))
-                
-                data = {'Instructions': instructions, 'Face': s_faces, 'Scene': s_scenes}
-                image_key = pd.DataFrame(data)
-                image_key.to_csv('Images/1-Neurofeedback/Composite_Images' + Block + '_key.csv')
-                del instructions
-                del faces
-                del scenes
-                del composite_images
-                del s_faces
-                del s_scenes
-                del s_composite_images
-                del data
-                del image_key
-                del temp            
-            
-            
-                row_data = excel_file_lable.iloc[j,[1, 2, 3]].to_numpy()
-                print(row_data)
-                image_window.next_image()
-                totdata=[]
-                for n in range(0,5):
-                    tdata=[]
-                    for i in range(self.numberOfGetDataCalls): #looking at each image for 5 seconds
-                        device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
-                        dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
-                        data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength
-                        combined_data = np.concatenate((data, row_data))
-                        tdata.append(combined_data)
-                        tdataarray=np.array(tdata)
-                    totdata.append(tdataarray)
-                    totdata_array=np.array(totdata)
-                    new_totdata_array = totdata_array.reshape(-1, 20)  # Reshape the array into 2D
-                    # print('new_totdata_array',new_totdata_array.shape)
-                    del tdata
-        
-                    Combined_raw_eeg_df = pd.DataFrame(new_totdata_array) 
-                    Combined_raw_eeg_nf = Combined_raw_eeg_df.iloc[:, :8]
-                    Combined_raw_eeg_nf_bp = np.copy(Combined_raw_eeg_nf)
-                    num_columns_nf = Combined_raw_eeg_nf_bp.shape[1]
-                    for column in range(num_columns_nf):
-                        Combined_raw_eeg_nf_bp[:, column] = self.butter_bandpass_filter(Combined_raw_eeg_nf_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5)    
-                    combined_raw_eeg_nf_bp=pd.DataFrame(Combined_raw_eeg_nf_bp)
-                    # print('combined_raw_eeg_nf_bp_df', combined_raw_eeg_nf_bp.shape)
-                    # print(list(combined_raw_eeg_nf_bp.columns))
-                    eeg_df_denoised_nf = self.preprocess(combined_raw_eeg_nf_bp, col_names=list(combined_raw_eeg_nf_bp.columns), n_clusters=[50]*len(combined_raw_eeg_nf_bp.columns))
-                    # print('eeg_df_denoised_nf', eeg_df_denoised_nf.shape)
-                    # print(type(eeg_df_denoised_nf)), #<class 'pandas.core.frame.DataFrame'>
-                    denoised_data = eeg_df_denoised_nf.to_numpy()
-                    last_samples = denoised_data[-250:]
-                    if len(last_samples) <= buffer_size_samples:
-                        buffer = np.append(buffer, last_samples, axis=0)
-                        if buffer.shape[0] > buffer_size_samples:
-                            num_extra_samples = buffer.shape[0] - buffer_size_samples
-                            buffer = buffer[num_extra_samples:, :]
+                # Adjust alpha
+                if instruction == 'Face':
+                    if correct_prediction:
+                        face_alpha_index = min(face_alpha_index + 1, len(face_alpha_values) - 1)
+                        print(f"Face mask increased in the {n}th second.", 'face alpha index=', face_alpha_index)
                     else:
-                        buffer = last_samples[-buffer_size_samples:, :]        
-                    # print('Buffer shape:', buffer.shape)   
-                    # print('Buffer:', buffer)
-                    # print('buffer type:', type(buffer))
-                   
-                    chunks = np.array_split(buffer, 4, axis=0)
-                    print('chunks', len(chunks)) 
-                    print(chunks[1].shape)
-                    feature=[]
-                    scaler = StandardScaler()
-                    for chunk in chunks: 
-                        analytic_signal = hilbert(chunk)
-                        envelope = np.abs(analytic_signal)
-                        envelope=np.hstack((envelope, chunk))
-                        envelop_standardized = scaler.fit_transform(envelope)
-                        envelop_standardized_tr=envelop_standardized.transpose()
-                        pca = PCA(n_components=16)  # how many components you want to keep
-                        pca.fit(envelop_standardized_tr)
-                        eeg_data_pca = pca.transform(envelop_standardized_tr)
-                        print(eeg_data_pca.shape)
-                        feature.append(eeg_data_pca)
-                    # print(len(feature))
-                    feature_array=np.array(feature)
-                    X_n=feature_array.reshape(-1,16*16)
-                    print(X_n.shape)
-                    predictions =svm_model.predict(X_n)
-                    most_common_prediction = stats.mode(predictions)
-                    print("Most common prediction:", most_common_prediction[0])
-                    
-                print('j',j)
-                del totdata 
+                        face_alpha_index = max(face_alpha_index - 1, 0)
+                        print(f"Face mask decreased in the {n}th second.", 'face alpha index=', face_alpha_index)
+                else:  # Instruction is 'Scene'
+                    if correct_prediction:
+                        face_alpha_index = max(face_alpha_index - 1, 0) 
+                        print(f"Face mask decreased in the {n}th second.", 'face alpha index=', face_alpha_index)
+                    else:
+                        face_alpha_index = min(face_alpha_index + 1, len(face_alpha_values) - 1)
+                        print(f"Face mask increased in the {n}th second.", 'face alpha index=', face_alpha_index)
+                
+                new_face_alpha=face_alpha_values[face_alpha_index]
+                # image_window.create_composite_img(new_face_alpha) 
+                image_window.update_transparency(new_face_alpha)
 
+                del tdata
+                print('j',j)    
+                    
         image_window.pleaseWait_image()        
         self.update_gui()
         self.update_patient_data() 
