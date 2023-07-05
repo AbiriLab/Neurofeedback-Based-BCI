@@ -52,7 +52,7 @@ class DisplayImage:
 
     def create_instruct_order(self):
         if not self.single_block:
-            block_instruct_dict = {'1': "Face", '2': "Scene", '3': "Face", '4': "Scene", '5': "Face", '6': "Scene"}
+            block_instruct_dict = {'1': "Face", '2': "Scene", '3': "Face", '4': "Scene", '5': "Face", '6': "Scene", '7': "Face", '8': "Scene"}
             self.instruct_order = list(map(block_instruct_dict.get, self.block_order))
             print('self.instruct_order', self.instruct_order)
 

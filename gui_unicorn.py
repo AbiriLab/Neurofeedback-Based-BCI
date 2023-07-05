@@ -7,7 +7,7 @@ import numpy as np
 from image_display_unicorn import *
 import UnicornPy
 import random
-device = UnicornPy.Unicorn("UN-2021.05.36")
+device = UnicornPy.Unicorn("UN-2021.05.37")
 from scipy.signal import butter, filtfilt     
 
 
@@ -201,7 +201,7 @@ class RootWindow:
         tdataarray=[]
         tdata=[]
         data=[]  
-        for j in range (0,40):
+        for j in range (0,1):
             
                 row_data = excel_file_lable.iloc[j,[1, 2, 3]].to_numpy()
                 print(row_data)

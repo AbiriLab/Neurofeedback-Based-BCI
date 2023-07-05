@@ -62,7 +62,7 @@ class RootWindow:
         self.image_window = None
         self.block = 0
         self.image_window_open = False
-        self.patient_progress = ['', '0', '0', '0', '000000']
+        self.patient_progress = ['', '0', '0', '0', '00000000']
         self.patient_index = 0
         self.patient_data_list = []
         self.pre_eval = 0
@@ -70,9 +70,9 @@ class RootWindow:
         self.post_eval = 0
         self.seq = None
         self.top = None
-        self.r = [1, 2, 3, 4, 5, 6]
+        self.r = [1, 2, 3, 4, 5, 6, 7, 8]
         self.key_pressed = False
-        self.instruction_mapping = {1: 'Face', 2: 'Scene', 3: 'Face', 4: 'Scene', 5: 'Face', 6: 'Scene'}
+        self.instruction_mapping = {1: 'Face', 2: 'Scene', 3: 'Face', 4: 'Scene', 5: 'Face', 6: 'Scene', 7: 'Face', 8: 'Scene'}
         
         master.bind('<KeyPress>', self.key_press)
         with open('pat_progess_v2.csv', 'r') as file:
@@ -154,6 +154,12 @@ class RootWindow:
         self.end_block_but.grid(row=3, column=1, pady=5, padx=3)
 
         self.frame_3.grid(padx=30, pady=50, row=0, column=2)
+    
+    def update_progress(self, progress):
+        # Scale progress to match the range of the progress bar (0-100)
+        scaled_progress = (progress / 6) * 100
+        self.progress.set(scaled_progress)
+    
                
     def create_trial(self):
         patient_name = self.patient_name_entry.get()
@@ -300,7 +306,7 @@ class RootWindow:
         face_alpha_index=2
         # face_alpha = 128
          
-        for j in range (0,5):
+        for j in range (0,2):
             image_window.start_new_trial()
 
             for n in range(0,5): 
