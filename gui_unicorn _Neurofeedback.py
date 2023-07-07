@@ -73,6 +73,7 @@ class RootWindow:
         self.r = [1, 2, 3, 4, 5, 6, 7, 8]
         self.key_pressed = False
         self.instruction_mapping = {1: 'Face', 2: 'Scene', 3: 'Face', 4: 'Scene', 5: 'Face', 6: 'Scene', 7: 'Face', 8: 'Scene'}
+    
         
         master.bind('<KeyPress>', self.key_press)
         with open('pat_progess_v2.csv', 'r') as file:
@@ -331,16 +332,16 @@ class RootWindow:
                 bufferdataframe=pd.DataFrame(buffer)
                 print('bufferdataframe.shape', bufferdataframe.shape)
                 
-                plt.figure(figsize=(10, 6))  # Adjust the size as necessary
+                # plt.figure(figsize=(10, 6))  # Adjust the size as necessary
 
-                for col in bufferdataframe.columns:
-                    plt.plot(bufferdataframe[col], label=col)
+                # for col in bufferdataframe.columns:
+                #     plt.plot(bufferdataframe[col], label=col)
 
-                plt.xlabel('Sample Time')
-                plt.ylabel('Values')
-                plt.title(f'bufferdataframe={j}_n={n}')
-                plt.legend()
-                plt.savefig(f'plot_j={j}_n={n}.png')
+                # plt.xlabel('Sample Time')
+                # plt.ylabel('Values')
+                # plt.title(f'bufferdataframe={j}_n={n}')
+                # plt.legend()
+                # plt.savefig(f'plot_j={j}_n={n}.png')
 
                 Combined_raw_eeg_nf_bp = np.copy(buffer)
                 num_columns_nf = buffer.shape[1]
@@ -349,31 +350,30 @@ class RootWindow:
                 combined_raw_eeg_nf_bp=pd.DataFrame(Combined_raw_eeg_nf_bp)
                 print('combined_raw_eeg_nf_bp', combined_raw_eeg_nf_bp.shape)
                 
-                plt.figure(figsize=(10, 6))  # Adjust the size as necessary
+                # plt.figure(figsize=(10, 6))  # Adjust the size as necessary
 
-                for col in combined_raw_eeg_nf_bp.columns:
-                    plt.plot(combined_raw_eeg_nf_bp[col], label=col)
+                # for col in combined_raw_eeg_nf_bp.columns:
+                #     plt.plot(combined_raw_eeg_nf_bp[col], label=col)
 
-                plt.xlabel('Sample Time')
-                plt.ylabel('Values')
-                plt.title(f'bandpassfilterdataframe={j}_n={n}')
-                plt.legend()
-                plt.savefig(f'bpplot_j={j}_n={n}.png')
+                # plt.xlabel('Sample Time')
+                # plt.ylabel('Values')
+                # plt.title(f'bandpassfilterdataframe={j}_n={n}')
+                # plt.legend()
+                # plt.savefig(f'bpplot_j={j}_n={n}.png')
 
                 eeg_df_denoised_nf = self.preprocess(combined_raw_eeg_nf_bp, col_names=list(combined_raw_eeg_nf_bp.columns), n_clusters=[50]*len(combined_raw_eeg_nf_bp.columns))
                 denoised_data = eeg_df_denoised_nf.to_numpy()
                 denoised=pd.DataFrame(denoised_data)
                 print('denoised',denoised.shape)
                 
-                plt.figure(figsize=(10, 6)) 
-                for col in denoised.columns: 
-                    plt.plot(denoised[col], label=col)
-
-                plt.xlabel('Sample Time')
-                plt.ylabel('Values')
-                plt.title(f'denoised_data={j}_n={n}')
-                plt.legend()
-                plt.savefig(f'denoised_data_j={j}_n={n}.png')
+                # plt.figure(figsize=(10, 6)) 
+                # for col in denoised.columns: 
+                #     plt.plot(denoised[col], label=col)
+                # plt.xlabel('Sample Time')
+                # plt.ylabel('Values')
+                # plt.title(f'denoised_data={j}_n={n}')
+                # plt.legend()
+                # plt.savefig(f'denoised_data_j={j}_n={n}.png')
                 
                 chunks = np.array_split(denoised_data, 5, axis=0)
                 feature=[]
@@ -416,10 +416,9 @@ class RootWindow:
                 image_window.update_transparency(new_face_alpha)
 
                 del tdata
-                plt.close()
-
+                # plt.close()
                 print('j',j) 
-            # plt.ioff()  # Turn off interactive mode   
+          
                     
         image_window.pleaseWait_image()        
         self.update_gui()
