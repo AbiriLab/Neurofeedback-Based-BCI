@@ -308,10 +308,7 @@ class RootWindow:
          
         for j in range (0,2):
             image_window.start_new_trial()
-            
-            fig, axs = plt.subplots(5, figsize=(10, 20))  # Adjust the size as necessary
-            fig, fil = plt.subplots(5, figsize=(10, 20))  # Adjust the size as necessary
-            
+
             for n in range(0,5): 
                 tdata=[]
                 for i in range(self.numberOfGetDataCalls): #looking at each image for 5 seconds
@@ -333,35 +330,51 @@ class RootWindow:
                 print(buffer) 
                 bufferdataframe=pd.DataFrame(buffer)
                 print('bufferdataframe.shape', bufferdataframe.shape)
-               
+                
+                plt.figure(figsize=(10, 6))  # Adjust the size as necessary
 
-                # Plotting
-                for i in range(bufferdataframe.shape[1]):
-                    axs[n].plot(bufferdataframe.iloc[:, i], label=f'ch={i}')
-                axs[n].set_title(f'Plot for j={j}, n={n}')
-                axs[n].legend(loc='upper right') 
-                plt.tight_layout()
-                plt.show()
+                for col in bufferdataframe.columns:
+                    plt.plot(bufferdataframe[col], label=col)
 
-                        
-                                           
+                plt.xlabel('Sample Time')
+                plt.ylabel('Values')
+                plt.title(f'bufferdataframe={j}_n={n}')
+                plt.legend()
+                plt.savefig(f'plot_j={j}_n={n}.png')
+
                 Combined_raw_eeg_nf_bp = np.copy(buffer)
                 num_columns_nf = buffer.shape[1]
                 for column in range(num_columns_nf):
                     Combined_raw_eeg_nf_bp[:, column] = self.butter_bandpass_filter(Combined_raw_eeg_nf_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5)    
                 combined_raw_eeg_nf_bp=pd.DataFrame(Combined_raw_eeg_nf_bp)
                 print('combined_raw_eeg_nf_bp', combined_raw_eeg_nf_bp.shape)
-
-                # # Plotting
-                # for i in range(combined_raw_eeg_nf_bp.shape[1]):
-                #    fil[n].plot(combined_raw_eeg_nf_bp.iloc[:, i], label=f'ch{i}')
-                # fil[n].set_title(f'Plot for j={j}, n={n}')
-                # fil[n].legend(loc='upper right') 
-                # plt.tight_layout()
-                # plt.show()
                 
+                plt.figure(figsize=(10, 6))  # Adjust the size as necessary
+
+                for col in combined_raw_eeg_nf_bp.columns:
+                    plt.plot(combined_raw_eeg_nf_bp[col], label=col)
+
+                plt.xlabel('Sample Time')
+                plt.ylabel('Values')
+                plt.title(f'bandpassfilterdataframe={j}_n={n}')
+                plt.legend()
+                plt.savefig(f'bpplot_j={j}_n={n}.png')
+
                 eeg_df_denoised_nf = self.preprocess(combined_raw_eeg_nf_bp, col_names=list(combined_raw_eeg_nf_bp.columns), n_clusters=[50]*len(combined_raw_eeg_nf_bp.columns))
                 denoised_data = eeg_df_denoised_nf.to_numpy()
+                denoised=pd.DataFrame(denoised_data)
+                print('denoised',denoised.shape)
+                
+                plt.figure(figsize=(10, 6)) 
+                for col in denoised.columns: 
+                    plt.plot(denoised[col], label=col)
+
+                plt.xlabel('Sample Time')
+                plt.ylabel('Values')
+                plt.title(f'denoised_data={j}_n={n}')
+                plt.legend()
+                plt.savefig(f'denoised_data_j={j}_n={n}.png')
+                
                 chunks = np.array_split(denoised_data, 5, axis=0)
                 feature=[]
                 scaler = StandardScaler()
@@ -403,8 +416,10 @@ class RootWindow:
                 image_window.update_transparency(new_face_alpha)
 
                 del tdata
-                plt.close(fig)
-                print('j',j)    
+                plt.close()
+
+                print('j',j) 
+            # plt.ioff()  # Turn off interactive mode   
                     
         image_window.pleaseWait_image()        
         self.update_gui()
