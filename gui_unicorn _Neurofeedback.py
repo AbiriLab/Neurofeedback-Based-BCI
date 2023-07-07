@@ -7,7 +7,7 @@ import numpy as np
 from image_display_unicorn_NF import *
 import UnicornPy
 import random
-device = UnicornPy.Unicorn("UN-2021.05.37")
+device = UnicornPy.Unicorn("UN-2021.05.36")
 from scipy.signal import butter, filtfilt     
 ####################################################
 import os
@@ -50,7 +50,7 @@ class RootWindow:
     
     def __init__(self, master):
         self.SamplingRate = UnicornPy.SamplingRate
-        self.SerialNumber = 'UN-2021.05.37'
+        self.SerialNumber = 'UN-2021.05.36'
         self.numberOfAcquiredChannels = device.GetNumberOfAcquiredChannels()
         self.configuration = device.GetConfiguration()
         self.AcquisitionDurationInSeconds = 1 
@@ -308,7 +308,10 @@ class RootWindow:
          
         for j in range (0,2):
             image_window.start_new_trial()
-
+            
+            fig, axs = plt.subplots(5, figsize=(10, 20))  # Adjust the size as necessary
+            fig, fil = plt.subplots(5, figsize=(10, 20))  # Adjust the size as necessary
+            
             for n in range(0,5): 
                 tdata=[]
                 for i in range(self.numberOfGetDataCalls): #looking at each image for 5 seconds
@@ -325,12 +328,38 @@ class RootWindow:
                     buffer = buffer[num_extra_samples:, :]
                 else:
                     buffer = Last_data[-buffer_size_samples:, :]        
-                print('j',j, 'n',n)                     
+                
+                print('j',j, 'n',n)  
+                print(buffer) 
+                bufferdataframe=pd.DataFrame(buffer)
+                print('bufferdataframe.shape', bufferdataframe.shape)
+               
+
+                # Plotting
+                for i in range(bufferdataframe.shape[1]):
+                    axs[n].plot(bufferdataframe.iloc[:, i], label=f'ch={i}')
+                axs[n].set_title(f'Plot for j={j}, n={n}')
+                axs[n].legend(loc='upper right') 
+                plt.tight_layout()
+                plt.show()
+
+                        
+                                           
                 Combined_raw_eeg_nf_bp = np.copy(buffer)
                 num_columns_nf = buffer.shape[1]
                 for column in range(num_columns_nf):
                     Combined_raw_eeg_nf_bp[:, column] = self.butter_bandpass_filter(Combined_raw_eeg_nf_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5)    
                 combined_raw_eeg_nf_bp=pd.DataFrame(Combined_raw_eeg_nf_bp)
+                print('combined_raw_eeg_nf_bp', combined_raw_eeg_nf_bp.shape)
+
+                # # Plotting
+                # for i in range(combined_raw_eeg_nf_bp.shape[1]):
+                #    fil[n].plot(combined_raw_eeg_nf_bp.iloc[:, i], label=f'ch{i}')
+                # fil[n].set_title(f'Plot for j={j}, n={n}')
+                # fil[n].legend(loc='upper right') 
+                # plt.tight_layout()
+                # plt.show()
+                
                 eeg_df_denoised_nf = self.preprocess(combined_raw_eeg_nf_bp, col_names=list(combined_raw_eeg_nf_bp.columns), n_clusters=[50]*len(combined_raw_eeg_nf_bp.columns))
                 denoised_data = eeg_df_denoised_nf.to_numpy()
                 chunks = np.array_split(denoised_data, 5, axis=0)
@@ -374,6 +403,7 @@ class RootWindow:
                 image_window.update_transparency(new_face_alpha)
 
                 del tdata
+                plt.close(fig)
                 print('j',j)    
                     
         image_window.pleaseWait_image()        
