@@ -10,7 +10,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
-class DisplayImage:
+class DisplayImagenf:
 
     def __init__(self, master, block, block_order):
 
@@ -56,7 +56,7 @@ class DisplayImage:
             self.instruct_order = list(map(block_instruct_dict.get, self.block_order))
             print('self.instruct_order', self.instruct_order)
 
-    def create_img_arr(self):   
+    def create_img_arr_nf(self):   
         print('Creating array')
         # Create the composite image
         composite_img = self.create_composite_img(128)  # start with equal transparency
@@ -114,7 +114,7 @@ class DisplayImage:
     def close_window(self):
         self.master.destroy()
 
-    def instructions_image(self):  # prob pass in block number( or self.randomized _blocks) and then show the image associated with it so when self.pause is true could show this image instead
+    def instructions_image_nf(self):  # prob pass in block number( or self.randomized _blocks) and then show the image associated with it so when self.pause is true could show this image instead
         base_dir_ins = "C:/Users/tnlab/OneDrive/Documents/GitHub/Neurofeedback-Based-BCI/Images/1-Neurofeedback/Neurofeedback_Instruction"
         instruct_order = self.instruct_order
         target = instruct_order[self.curr_block]
