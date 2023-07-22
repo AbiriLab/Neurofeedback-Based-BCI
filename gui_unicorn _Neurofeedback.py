@@ -325,10 +325,16 @@ class RootWindow:
                         device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
                         dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
                         data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength
+                        print('sample', i)
+                        print('data',data)
                         tdata.append(data)
                         tdataarray=np.array(tdata)
+                        # print('tdataarray', tdataarray)
+                        
                     new_totdata_array = tdataarray.reshape(-1, 17)  # Reshape the array into 2D
                     Last_data=new_totdata_array[:, :8]
+                    # print('Last_data', Last_data)
+                    
                     buffer = np.append(buffer, Last_data, axis=0)
                     if buffer.shape[0] > buffer_size_samples:
                         num_extra_samples = buffer.shape[0] - buffer_size_samples
@@ -337,9 +343,9 @@ class RootWindow:
                         buffer = Last_data[-buffer_size_samples:, :]        
                     
                     print('j',j, 'n',n)  
-                    print(buffer) 
+                    # print(buffer) 
                     bufferdataframe=pd.DataFrame(buffer)
-                    print('bufferdataframe.shape', bufferdataframe.shape)
+                    # print('bufferdataframe.shape', bufferdataframe.shape)
                     
                     # plt.figure(figsize=(10, 6))  # Adjust the size as necessary
 
