@@ -8,7 +8,7 @@ from image_display_unicorn import *
 from image_display_unicorn_NF import *
 import UnicornPy
 import random
-device = UnicornPy.Unicorn("UN-2021.05.36")
+device = UnicornPy.Unicorn("UN-2021.05.37")
 from scipy.signal import butter, filtfilt     
 ####################################################
 import os
@@ -51,7 +51,7 @@ class RootWindow:
     
     def __init__(self, master):
         self.SamplingRate = UnicornPy.SamplingRate
-        self.SerialNumber = 'UN-2021.05.36'
+        self.SerialNumber = 'UN-2021.05.37'
         self.numberOfAcquiredChannels = device.GetNumberOfAcquiredChannels()
         self.configuration = device.GetConfiguration()
         self.AcquisitionDurationInSeconds = 1 
@@ -248,6 +248,8 @@ class RootWindow:
         b, a = self.butter_bandpass(lowcut, highcut, fs, order=order)
         y = filtfilt(b, a, data)
         return y
+    
+    
     # Pre-proccessing
     # Denoising 
     def denoise_data(self, df, col_names, n_clusters):
@@ -292,9 +294,9 @@ class RootWindow:
     def start_trial(self):
         global image_window, top
         if self.curr_phase.get() == "Neurofeedback":  
-            print('self.curr_phase.get() ==', self.curr_phase.get())
+            # print('self.curr_phase.get() ==', self.curr_phase.get())
             seq_list = [int(x) for x in self.seq if x.isdigit()]
-            print(seq_list)
+            # print(seq_list)
             print('Block',self.block)
             print('randomized_blocks:',seq_list[self.block])
             image_window.instructions_image_nf()
@@ -350,54 +352,31 @@ class RootWindow:
                             # Save buffer to an Excel file
                     
                     df = pd.DataFrame(buffer)
-                    df.to_excel(f"buffer_{j}_{n}.xlsx", index=False)
-                    print('j',j, 'n',n)  
-                    print('buffer', buffer) 
+                    df.to_csv(f"buffer_{j}_{n}.csv", index=False)
+                    # print('j',j, 'n',n)  
+                    # print('buffer', buffer) 
                     bufferdataframe=pd.DataFrame(buffer)
-                    print('bufferdataframe.shape', bufferdataframe.shape)
+                    # print('bufferdataframe.shape', bufferdataframe.shape)
                     
-                    plt.figure(figsize=(10, 6))  # Adjust the size as necessary
 
-                    for col in bufferdataframe.columns:
-                        plt.plot(bufferdataframe[col], label=col)
-
-                    plt.xlabel('Sample Time')
-                    plt.ylabel('Values')
-                    plt.title(f'bufferdataframe_j={j}_n={n}')
-                    plt.legend()
-                    plt.savefig(f'plot_j={j}_n={n}.png')
 
                     Combined_raw_eeg_nf_bp = np.copy(buffer)
                     num_columns_nf = buffer.shape[1]
                     for column in range(num_columns_nf):
                         Combined_raw_eeg_nf_bp[:, column] = self.butter_bandpass_filter(Combined_raw_eeg_nf_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5)    
                     combined_raw_eeg_nf_bp=pd.DataFrame(Combined_raw_eeg_nf_bp)
-                    print('combined_raw_eeg_nf_bp', combined_raw_eeg_nf_bp.shape)
-                    
-                    plt.figure(figsize=(10, 6))  # Adjust the size as necessary
-
-                    for col in combined_raw_eeg_nf_bp.columns:
-                        plt.plot(combined_raw_eeg_nf_bp[col], label=col)
-
-                    plt.xlabel('Sample Time')
-                    plt.ylabel('Values')
-                    plt.title(f'bandpassfilterdataframe={j}_n={n}')
-                    plt.legend()
-                    plt.savefig(f'bpplot_j={j}_n={n}.png')
+                    # print('combined_raw_eeg_nf_bp', combined_raw_eeg_nf_bp.shape)
+                    combined_raw_eeg_nf_bp.to_csv(f"bufferbp_{j}_{n}.csv", index=False)
 
                     eeg_df_denoised_nf = self.preprocess(combined_raw_eeg_nf_bp, col_names=list(combined_raw_eeg_nf_bp.columns), n_clusters=[50]*len(combined_raw_eeg_nf_bp.columns))
+                    print('type: eeg_df_denoised_nf',type(eeg_df_denoised_nf))
                     denoised_data = eeg_df_denoised_nf.to_numpy()
+                    
+                    
                     denoised=pd.DataFrame(denoised_data)
                     print('denoised',denoised.shape)
-                    
-                    plt.figure(figsize=(10, 6)) 
-                    for col in denoised.columns: 
-                        plt.plot(denoised[col], label=col)
-                    plt.xlabel('Sample Time')
-                    plt.ylabel('Values')
-                    plt.title(f'denoised_data={j}_n={n}')
-                    plt.legend()
-                    plt.savefig(f'denoised_data_j={j}_n={n}.png')
+                    eeg_df_denoised_nf.to_csv(f"bufferdn_{j}_{n}.csv", index=False)
+
                     
                     chunks = np.array_split(denoised_data, 5, axis=0)
                     feature=[]
@@ -414,7 +393,7 @@ class RootWindow:
                     feature_array=np.array(feature)
                     X_n=feature_array.reshape(-1,16*16)
                     predictions =svm_model.predict(X_n)
-                    print('predictions', predictions)
+                    # print('predictions', predictions)
                     # Check if the prediction was correct
                     instruction = self.instruction_mapping[seq_list[self.block]]
                     correct_prediction = (instruction == 'Face' and predictions[0] == 0) or (instruction == 'Scene' and predictions[0] == 1)
@@ -423,22 +402,63 @@ class RootWindow:
                     if instruction == 'Face':
                         if correct_prediction:
                             face_alpha_index = min(face_alpha_index + 1, len(face_alpha_values) - 1)
-                            print(f"Face mask increased in the {n}th second.", 'face alpha index=', face_alpha_index)
+                            # print(f"Face mask increased in the {n}th second.", 'face alpha index=', face_alpha_index)
                         else:
                             face_alpha_index = max(face_alpha_index - 1, 0)
-                            print(f"Face mask decreased in the {n}th second.", 'face alpha index=', face_alpha_index)
+                            # print(f"Face mask decreased in the {n}th second.", 'face alpha index=', face_alpha_index)
                     else:  # Instruction is 'Scene'
                         if correct_prediction:
                             face_alpha_index = max(face_alpha_index - 1, 0) 
-                            print(f"Face mask decreased in the {n}th second.", 'face alpha index=', face_alpha_index)
+                            # print(f"Face mask decreased in the {n}th second.", 'face alpha index=', face_alpha_index)
                         else:
                             face_alpha_index = min(face_alpha_index + 1, len(face_alpha_values) - 1)
-                            print(f"Face mask increased in the {n}th second.", 'face alpha index=', face_alpha_index)
+                            # print(f"Face mask increased in the {n}th second.", 'face alpha index=', face_alpha_index)
                     
                     new_face_alpha=face_alpha_values[face_alpha_index]
                     image_window.update_transparency(new_face_alpha)
+
+                    
+                    plt.figure(figsize=(10, 6))  # Adjust the size as necessary
+
+                    for col in bufferdataframe.columns:
+                        plt.plot(bufferdataframe[col], label=col, linewidth=0.5, linestyle=['-', '--', '-.', ':'][i % 4])
+
+                    plt.xlabel('Sample Time')
+                    plt.ylabel('Values')
+                    plt.title(f'buffer_j={j}_n={n}')
+                    plt.legend()
+                    plt.savefig(f'buffer_j={j}_n={n}.png')
+
+                    
+                    plt.figure(figsize=(10, 6))  # Adjust the size as necessary
+                    for col in combined_raw_eeg_nf_bp.columns:
+                        plt.plot(combined_raw_eeg_nf_bp[col], label=col, linewidth=0.5, linestyle=['-', '--', '-.', ':'][i % 4])
+                    plt.xlabel('Sample Time')
+                    plt.ylabel('Values')
+                    plt.title(f'bp_j={j}_n={n}')
+                    plt.legend()
+                    plt.savefig(f'bp=_j={j}_n={n}.png')
+
+                    plt.figure(figsize=(10, 6)) 
+                    for col in eeg_df_denoised_nf.columns: 
+                        # plt.plot(eeg_df_denoised_nf[col], label=col)
+                        plt.plot(eeg_df_denoised_nf[col], label=col, linewidth=0.5, linestyle=['-', '--', '-.', ':'][i % 4])
+                    plt.xlabel('Sample Time')
+                    plt.ylabel('Values')
+                    plt.title(f'denoised_j={j}_n={n}')
+                    # plt.yscale('log')
+                    plt.legend()
+                    plt.savefig(f'denoised_j={j}_n={n}.png')
+
+                    
                 del tdata
-                print('j',j)
+                
+                
+                
+                
+                
+                
+                # print('j',j)
         
         else: 
             
