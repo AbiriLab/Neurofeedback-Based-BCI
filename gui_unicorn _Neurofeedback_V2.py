@@ -343,23 +343,24 @@ class RootWindow:
                     if buffer.shape[0] > buffer_size_samples:
                         num_extra_samples = buffer.shape[0] - buffer_size_samples
                         buffer = buffer[num_extra_samples:, :]
-                    else:
-                        missing_samples = buffer_size_samples - buffer.shape[0]
-                        if missing_samples > 250:  # or whatever number of samples you want
-                            buffer = np.append(buffer, Last_data[-250:, :], axis=0)  # Only append the last 250 samples
-                        else:
-                            buffer = np.append(buffer, Last_data[-missing_samples:, :], axis=0)
-                            # Save buffer to an Excel file
+                    # else:
+                    #     missing_samples = buffer_size_samples - buffer.shape[0]
+                    #     if missing_samples > 250: 
+                    #         buffer = np.append(buffer, Last_data[-250:, :], axis=0)  # Only append the last 250 samples
+                    #     else:
+                    #         buffer = np.append(buffer, Last_data[-missing_samples:, :], axis=0)
+                    #         # Save buffer to an Excel file
+                    
+                    print('buffer.shape',buffer.shape, 'type', type(buffer))
+                    
                     
                     df = pd.DataFrame(buffer)
                     df.to_csv(f"buffer_{j}_{n}.csv", index=False)
                     # print('j',j, 'n',n)  
                     # print('buffer', buffer) 
-                    bufferdataframe=pd.DataFrame(buffer)
+                    # bufferdataframe=pd.DataFrame(buffer)   
                     # print('bufferdataframe.shape', bufferdataframe.shape)
                     
-
-
                     Combined_raw_eeg_nf_bp = np.copy(buffer)
                     num_columns_nf = buffer.shape[1]
                     for column in range(num_columns_nf):
@@ -419,20 +420,17 @@ class RootWindow:
 
                     
                     plt.figure(figsize=(10, 6))  # Adjust the size as necessary
-
-                    for col in bufferdataframe.columns:
-                        plt.plot(bufferdataframe[col], label=col, linewidth=0.5, linestyle=['-', '--', '-.', ':'][i % 4])
-
+                    for col in df.columns:
+                        plt.plot(df[col], label=col, linewidth=0.5) #linestyle=['-', '--', '-.', ':'][i % 4]
                     plt.xlabel('Sample Time')
                     plt.ylabel('Values')
                     plt.title(f'buffer_j={j}_n={n}')
                     plt.legend()
                     plt.savefig(f'buffer_j={j}_n={n}.png')
 
-                    
                     plt.figure(figsize=(10, 6))  # Adjust the size as necessary
                     for col in combined_raw_eeg_nf_bp.columns:
-                        plt.plot(combined_raw_eeg_nf_bp[col], label=col, linewidth=0.5, linestyle=['-', '--', '-.', ':'][i % 4])
+                        plt.plot(combined_raw_eeg_nf_bp[col], label=col, linewidth=0.5)
                     plt.xlabel('Sample Time')
                     plt.ylabel('Values')
                     plt.title(f'bp_j={j}_n={n}')
@@ -442,22 +440,16 @@ class RootWindow:
                     plt.figure(figsize=(10, 6)) 
                     for col in eeg_df_denoised_nf.columns: 
                         # plt.plot(eeg_df_denoised_nf[col], label=col)
-                        plt.plot(eeg_df_denoised_nf[col], label=col, linewidth=0.5, linestyle=['-', '--', '-.', ':'][i % 4])
+                        plt.plot(eeg_df_denoised_nf[col], label=col, linewidth=0.5)
                     plt.xlabel('Sample Time')
                     plt.ylabel('Values')
                     plt.title(f'denoised_j={j}_n={n}')
                     # plt.yscale('log')
                     plt.legend()
                     plt.savefig(f'denoised_j={j}_n={n}.png')
-
-                    
+   
                 del tdata
-                
-                
-                
-                
-                
-                
+
                 # print('j',j)
         
         else: 
