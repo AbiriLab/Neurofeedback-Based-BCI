@@ -46,6 +46,8 @@ from scipy import stats
 from os import listdir
 from PIL import Image, ImageDraw, ImageFilter
 
+import threading
+import time
 
 class RootWindow:
     
@@ -73,10 +75,13 @@ class RootWindow:
         self.top = None
         self.r = [1, 2, 3, 4, 5, 6, 7, 8]
         self.key_pressed = False
+        self.key_data = [0] * 10000
         self.instruction_mapping = {1: 'Face', 2: 'Scene', 3: 'Face', 4: 'Scene', 5: 'Face', 6: 'Scene', 7: 'Face', 8: 'Scene'}
     
         
-        master.bind('<KeyPress>', self.key_press)
+        master.bind('<KeyPress>', self.key_press_listener)
+        
+        
         with open('pat_progess_v2.csv', 'r') as file:
             reader = csv.reader(file)
             for row in reader:
@@ -84,9 +89,10 @@ class RootWindow:
         # print('patient_data_list:)',self.patient_data_list)
         df = pd.read_csv('pat_progess_v2.csv')
         # print('patient_data_frame:',df)
+        
         self.create_gui(master)
 
-    def key_press(self,event):
+    def key_press_listener(self, event):
         self.key_pressed = True
         
     def create_gui(self, master):
@@ -454,6 +460,8 @@ class RootWindow:
         
         else: 
             
+            
+            
             seq_list = [int(x) for x in self.seq if x.isdigit()]
             print(seq_list)
             print('Block',self.block)
@@ -470,57 +478,71 @@ class RootWindow:
             
             # for n in range(len(self.randomized_blocks)):
             excel_file_lable = pd.read_csv(f'Block{seq_list[self.block]}_key.csv')
+                    # Starting a thread to listen for key presses
+                    
+         
             
-            key_data=[]
+            key_data = [0] * 10000
             tdataarray=[]
             tdata=[]
             data=[]
               
             for j in range (0,40):
                     row_data = excel_file_lable.iloc[j,[1, 2, 3]].to_numpy()
-                    print(row_data)
+                    # print(row_data)
                     
                     image_window.next_image()
-                    for i in range(0, self.numberOfGetDataCalls):
+                    for i in range(0, self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
                         # print('j', j, 'i', i)
+                        
+                        index = j * self.numberOfGetDataCalls + i
+
+
+                        if self.key_pressed:
+                            key_data[index] = 1
+                            self.key_pressed = False
+
                         # Receives the configured number of samples from the Unicorn device and writes it to the acquisition buffer.
                         device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
+
                         # Convert receive buffer to numpy float array 
                         dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
                         data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength,
-                        print('data', data)
-                        if self.key_pressed:
-                            key_data=[1]
-                            # self.key_pressed_during_loop = True
-                            self.key_pressed = False       
-                        else:
-                            key_data=[0] 
-                                    
-                        # print(key_data)  
+                
+
+                        
+
                         # Concatenate the row_data and data arrays
                         combined_data = np.concatenate((data, row_data))
-                        combined_data = np.concatenate((combined_data, key_data))
+                        # combined_data = np.concatenate((combined_data, key_data))
                         tdata.append(combined_data)
-                        tdataarray=np.array(tdata) 
-                    
-                    key_data.append(key_data)     
+                        tdataarray = np.array(tdata)
+                        key_data.append(key_data)     
 
                     with open('raw_eeg_data_'+str(image_window.curr_block)+'.csv', 'w', newline='') as csvfile:
                         writer = csv.writer(csvfile)
                         for row in tdataarray:
-                            writer.writerow(row)                  
+                            writer.writerow(row)   
+                            
+                    with open('event_'+str(image_window.curr_block)+'.csv', 'w', newline='') as csvfile:
+                        writer = csv.writer(csvfile)
+                        for row in key_data:
+                            writer.writerow(row)                
                     # print('Data length',len(tdata) ) 
                     # print('Data length',tdataarray.shape)
                     # print(j)
+            
             del data
             del tdata
             del tdataarray
+            del key_data
         
-              
+     
         image_window.pleaseWait_image()        
         self.update_gui()
         self.update_patient_data() 
         device.StopAcquisition() 
+        
    
     ################################################################################################################################    
     ################################################################################################################################
