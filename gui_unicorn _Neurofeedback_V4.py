@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 from image_display_unicorn import *
 from image_display_unicorn_NF import *
+from keypress import *
 import UnicornPy
 import random
 device = UnicornPy.Unicorn("UN-2021.05.36")
@@ -45,9 +46,7 @@ from scipy import stats
 ##################################
 from os import listdir
 from PIL import Image, ImageDraw, ImageFilter
-
 import threading
-import time
 
 class RootWindow:
     
@@ -63,6 +62,7 @@ class RootWindow:
         self.receiveBuffer = bytearray(self.receiveBufferBufferLength)
         self.eeg_data = []
         self.image_window = None
+        self.key_window = None
         self.block = 0
         self.image_window_open = False
         self.patient_progress = ['', '0', '0', '0', '00000000']
@@ -74,12 +74,10 @@ class RootWindow:
         self.seq = None
         self.top = None
         self.r = [1, 2, 3, 4, 5, 6, 7, 8]
-        self.key_pressed = False
-        self.key_data = [0] * 10000
         self.instruction_mapping = {1: 'Face', 2: 'Scene', 3: 'Face', 4: 'Scene', 5: 'Face', 6: 'Scene', 7: 'Face', 8: 'Scene'}
     
         
-        master.bind('<KeyPress>', self.key_press_listener)
+        # Bind mouse press event to the main window
         
         
         with open('pat_progess_v2.csv', 'r') as file:
@@ -89,12 +87,8 @@ class RootWindow:
         # print('patient_data_list:)',self.patient_data_list)
         df = pd.read_csv('pat_progess_v2.csv')
         # print('patient_data_frame:',df)
-        
         self.create_gui(master)
 
-    def key_press_listener(self, event):
-        self.key_pressed = True
-        
     def create_gui(self, master):
         self.frame_1 = tk.Frame(master)
 
@@ -298,7 +292,7 @@ class RootWindow:
         return df_new    
         
     def start_trial(self):
-        global image_window, top
+        global image_window, key_window, top 
         if self.curr_phase.get() == "Neurofeedback":  
             # print('self.curr_phase.get() ==', self.curr_phase.get())
             seq_list = [int(x) for x in self.seq if x.isdigit()]
@@ -478,73 +472,49 @@ class RootWindow:
             excel_file_lable = pd.read_csv(f'Block{seq_list[self.block]}_key.csv')
             
             
-            total_samples = 40 * self.numberOfGetDataCalls
-        
-            key_data = [0] * total_samples
             tdataarray=[]
             tdata=[]
-            # data=[]
-            key2=[]
+            mouse_press_events = []
               
             for j in range (0,40):
                     row_data = excel_file_lable.iloc[j,[1, 2, 3]].to_numpy()
                     # print(row_data)
-                    key=[]
-                    image_window.next_image()
-                    for i in range(0, self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
-                        # print('j', j, 'i', i)
                     
-                        if self.key_pressed:
-                            k=1
-                        else:
-                            k=0
-                        
-                        print(i, k)    
-                        key.append(k)
-                        
+                    image_window.next_image()
+                    for i in range(0, self.numberOfGetDataCalls):
+                        # print('j', j, 'i', i)
                         # Receives the configured number of samples from the Unicorn device and writes it to the acquisition buffer.
                         device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
-
                         # Convert receive buffer to numpy float array 
                         dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
                         data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength,
-                
+                        key_window.check_key_press()
+                    
+                        
                         # Concatenate the row_data and data arrays
                         combined_data = np.concatenate((data, row_data))
-                        # combined_data = np.concatenate((combined_data, key_data))
+                        # combined_data = np.concatenate((combined_data, k))
                         tdata.append(combined_data)
-                        tdataarray = np.array(tdata)
-                        # key_data.append(key_data)
-                        # self.key_pressed = False 
+                        tdataarray=np.array(tdata) 
                         
-                    key2.append(key)
-                    
-                      
 
                     with open('raw_eeg_data_'+str(image_window.curr_block)+'.csv', 'w', newline='') as csvfile:
                         writer = csv.writer(csvfile)
                         for row in tdataarray:
-                            writer.writerow(row)   
-                   
+                            writer.writerow(row)                  
                     # print('Data length',len(tdata) ) 
+                    # print('Data length',tdataarray.shape)
                     # print(j)
-                    
-                    
-                    with open('key_'+str(image_window.curr_block)+'.csv', 'w', newline='') as csvfile:
-                        writer = csv.writer(csvfile)
-                        for row in key2:
-                            writer.writerow(row])
-                            
+                    print(mouse_press_events)
+            del mouse_press_events
             del tdata
             del tdataarray
-            del key_data
         
-     
-        image_window.pleaseWait_image()   
+              
+        image_window.pleaseWait_image()        
         self.update_gui()
         self.update_patient_data() 
         device.StopAcquisition() 
-        
    
     ################################################################################################################################    
     ################################################################################################################################

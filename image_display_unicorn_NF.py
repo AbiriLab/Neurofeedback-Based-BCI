@@ -16,7 +16,7 @@ class DisplayImagenf:
 
         self.ffaces = []
         self.sscenes = []
-
+    
         folder_dir = os.getcwd() + "/Images/1-Neurofeedback/Face"
         print('ffolder_dir', folder_dir)
         for image in os.listdir(folder_dir):
@@ -131,3 +131,7 @@ class DisplayImagenf:
         photo_img = ImageTk.PhotoImage(next_img_resized)
         self.label.config(image=photo_img)
         self.label.image = photo_img
+        
+
+       
+        
