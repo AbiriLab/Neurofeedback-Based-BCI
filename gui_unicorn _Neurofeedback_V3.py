@@ -1,5 +1,5 @@
 
-from tkinter import ttk
+from tkinter import ttk, Tk
 from tkinter import *
 import csv
 import pandas as pd
@@ -21,7 +21,7 @@ from sklearn.svm import SVC
 import matplotlib.pyplot as plt
 from scipy.signal import hilbert
 from sklearn.utils import shuffle
-from scipy.signal import butter, filtfilt
+from scipy.signal import butter, filtfilt, lfilter, lfilter_zi
 from tensorflow.keras.models import Sequential
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsRegressor
@@ -49,9 +49,25 @@ from PIL import Image, ImageDraw, ImageFilter
 import threading
 import time
 
-class RootWindow:
-    
+
+# KeyPressDetector class
+class KeyPressDetector:
     def __init__(self, master):
+        self.key_pressed = 0  # Initial state
+        master.bind('<Key>', self.on_key_press)
+
+    def on_key_press(self, event=None):
+        print("Key pressed detected!")
+        self.key_pressed = 1
+
+    def check_key_press(self):
+        result = self.key_pressed
+        self.key_pressed = 0  # Reset after checking
+        return result
+
+class RootWindow:
+    def __init__(self, master):
+        self.master = master  
         self.SamplingRate = UnicornPy.SamplingRate
         self.SerialNumber = 'UN-2021.05.36'
         self.numberOfAcquiredChannels = device.GetNumberOfAcquiredChannels()
@@ -59,7 +75,7 @@ class RootWindow:
         self.AcquisitionDurationInSeconds = 1 
         self.FrameLength=1
         self.numberOfGetDataCalls = int(self.AcquisitionDurationInSeconds * self.SamplingRate / self.FrameLength)
-        self.receiveBufferBufferLength = self.FrameLength * self.numberOfAcquiredChannels * 4  # 4 bytes per float32
+        self.receiveBufferBufferLength = self.FrameLength * self.numberOfAcquiredChannels*4   # 4 bytes per float32
         self.receiveBuffer = bytearray(self.receiveBufferBufferLength)
         self.eeg_data = []
         self.image_window = None
@@ -74,27 +90,16 @@ class RootWindow:
         self.seq = None
         self.top = None
         self.r = [1, 2, 3, 4, 5, 6, 7, 8]
-        self.key_pressed = False
-        self.key_data = [0] * 10000
         self.instruction_mapping = {1: 'Face', 2: 'Scene', 3: 'Face', 4: 'Scene', 5: 'Face', 6: 'Scene', 7: 'Face', 8: 'Scene'}
-    
-        
-        master.bind('<KeyPress>', self.key_press_listener)
-        
-        
+        self.create_gui(master)
+        self.key_detector = KeyPressDetector(master)
+
         with open('pat_progess_v2.csv', 'r') as file:
             reader = csv.reader(file)
             for row in reader:
                 self.patient_data_list.append(row)
-        # print('patient_data_list:)',self.patient_data_list)
         df = pd.read_csv('pat_progess_v2.csv')
-        # print('patient_data_frame:',df)
-        
-        self.create_gui(master)
-
-    def key_press_listener(self, event):
-        self.key_pressed = True
-        
+    
     def create_gui(self, master):
         self.frame_1 = tk.Frame(master)
 
@@ -134,7 +139,7 @@ class RootWindow:
         self.create_trial_but = Button(self.frame_2, text="Create Trial", bg="green", font=15, command=self.create_trial)
         self.create_trial_but.grid(row=1, column=0, columnspan=2, pady=15, padx=5)
 
-        self.start_trial_but = Button(self.frame_2, text="Start Trial", bg="green", font=15, command=self.start_trial)
+        self.start_trial_but = Button(self.frame_2, text="Start Trial", bg="green", font=15, command=self.start_trial_thread) #self.start_trial                           
         self.start_trial_but.grid(row=4, column=0, pady=15, padx=5)
 
         self.end_trial_but = Button(self.frame_2, text="End Trial", bg="red", font=15, command=self.end_trial)
@@ -173,7 +178,6 @@ class RootWindow:
         self.patient_progress[0] = patient_name
         random.shuffle(self.r)
         randomized_blocks = self.r
-        # print('randomized_blocks', randomized_blocks)
         for data_list in self.patient_data_list:
             if patient_name == data_list[0]:
                 self.patient_index = self.patient_data_list.index(data_list)
@@ -182,8 +186,6 @@ class RootWindow:
                 self.neuro = int(self.patient_progress[2])
                 self.post_eval = int(self.patient_progress[3])
                 self.seq = self.patient_progress[4]
-                # self.patient_data_list.append(self.patient_progress)
-                # print(f"Data Already Exists: {self.patient_progress}")
                 if self.curr_phase.get() == 'Pre-Evaluation':
                     self.block = self.pre_eval
                 elif self.curr_phase.get() == "Neurofeedback":
@@ -202,7 +204,6 @@ class RootWindow:
         self.patient_data_list.append(self.patient_progress)
         self.patient_index = len(self.patient_data_list) - 1
         self.add_patient_data()
-        # print(f"New Data Added: {self.patient_progress}")
         self.open_image_win()
         # self.update_gui()
 
@@ -212,14 +213,13 @@ class RootWindow:
             writer = csv.writer(csvfile)
             for row in self.patient_data_list:
                 writer.writerow(row)
-        # print(f"Full Data added to CSV: {self.patient_data_list}")
 
     def open_image_win(self):
         global image_window, top
         top = Toplevel()
         top.geometry("%dx%d+%d+%d" % (800, 600, 950, 200))
         top.title("Image Slideshow")
-        # print(list(self.seq.replace(" ", "")))
+        
         if self.curr_phase.get() == "Neurofeedback":  
             image_window = DisplayImagenf(top, self.block, list(self.seq.replace(" ", "")))
             image_window.single_block = False
@@ -233,7 +233,6 @@ class RootWindow:
             image_window.create_img_arr()
             image_window.pleaseWait_image()
             self.image_window_open = True
-        # print("Image Window Opened")
         top.update()
         
         
@@ -241,7 +240,6 @@ class RootWindow:
     ################################################################################################################################
     ################################################################################################################################   
     #Neurofeedback 
-
     def butter_bandpass(self, lowcut, highcut, fs, order=5):
         nyq = 0.5 * fs
         low = lowcut / nyq
@@ -249,11 +247,19 @@ class RootWindow:
         b, a = butter(order, [low, high], btype='band')
         return b, a
 
-    def butter_bandpass_filter(self, data, lowcut, highcut, fs, order=5):
-        # print(f'lowcut: {lowcut}, highcut: {highcut}, fs: {fs}, order: {order}')
+   
+    #Filter initial state 
+    def butter_bandpass_filter(self, data, lowcut, highcut, fs, order=5, initial_state=None):
         b, a = self.butter_bandpass(lowcut, highcut, fs, order=order)
-        y = filtfilt(b, a, data)
-        return y
+
+        # If no initial state is provided, calculate it.
+        if initial_state is None:
+            zi = lfilter_zi(b, a)
+            initial_state = zi * data[0]
+        
+        y, final_state = lfilter(b, a, data, zi=initial_state)
+        return y, final_state
+        
     
     
     # Pre-proccessing
@@ -262,7 +268,6 @@ class RootWindow:
         df_denoised = df.copy()
         df_denoised.reset_index(drop=True, inplace=True)
         for col_name, k in zip(col_names, n_clusters):
-            # print(f"Processing column {col_name}")
             df_denoised[col_name] = pd.to_numeric(df_denoised[col_name], errors='coerce') # Convert column to numeric format
             X = df_denoised.select_dtypes(include=['float64', 'int64']) # Select only numeric columns
             clf = KNeighborsRegressor(n_neighbors=k, weights='uniform') # Fit KNeighborsRegressor
@@ -297,19 +302,23 @@ class RootWindow:
         df_new = self.detrend(df_new, col_names)
         return df_new    
         
+
+    def start_trial_thread(self):
+        t = threading.Thread(target=self.start_trial)
+        t.start()   
+          
     def start_trial(self):
+        
         global image_window, top
+        self.master.focus_set()
         if self.curr_phase.get() == "Neurofeedback":  
-            # print('self.curr_phase.get() ==', self.curr_phase.get())
             seq_list = [int(x) for x in self.seq if x.isdigit()]
-            # print(seq_list)
             print('Block',self.block)
             print('randomized_blocks:',seq_list[self.block])
             image_window.instructions_image_nf()
             top.update()
             time.sleep(5)
             device.StartAcquisition(False)
-            # instruction = self.instruction_mapping[seq_list[self.block]]
         
             # Load the trained SVM model
             filename = r'C:\Users\tnlab\OneDrive\Documents\GitHub\Neurofeedback-Based-BCI\my_svm_model.joblib'
@@ -317,74 +326,58 @@ class RootWindow:
             
             # Initialize the buffer
             buffer_size_seconds = 5
-            samples_per_second = 250  # Assumed based on your description
+            samples_per_second = 250 
             buffer_size_samples = buffer_size_seconds * samples_per_second
             buffer = np.zeros((buffer_size_samples, 8))  # 8 is the number of EEG channels
             face_alpha_values = [0,70,128,204,255] 
             face_alpha_index=2
-            # face_alpha = 128
             
             for j in range (0,2):
                 image_window.start_new_trial()
                 tdata=[]
-                
-                for n in range(0,5):
+                for n in range(0,5): #looking at each image for 5 seconds
                     print('n', n)
-                    for i in range(self.numberOfGetDataCalls): #looking at each image for 5 seconds
+                    for i in range(self.numberOfGetDataCalls): 
                         device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
-                        # print('self.receiveBuffer', self.receiveBuffer)
                         dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
                         data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength
-                        # print('sample', i)
-                        # print('data',data)
                         tdata.append(data.copy())
                         tdataarray=np.array(tdata)
-                    
-                    # print('tdataarray', tdataarray.shape, tdataarray)    
                     new_totdata_array = tdataarray.reshape(-1, 17)  # Reshape the array into 2D
                     Last_data=new_totdata_array[:, :8]
-                    # print('Last_data', Last_data.shape, Last_data)
-                    
+                 
                     buffer = np.append(buffer, Last_data[-250:, :], axis=0)
                     if buffer.shape[0] > buffer_size_samples:
                         num_extra_samples = buffer.shape[0] - buffer_size_samples
                         buffer = buffer[num_extra_samples:, :]
-                    # else:
-                    #     missing_samples = buffer_size_samples - buffer.shape[0]
-                    #     if missing_samples > 250: 
-                    #         buffer = np.append(buffer, Last_data[-250:, :], axis=0)  # Only append the last 250 samples
-                    #     else:
-                    #         buffer = np.append(buffer, Last_data[-missing_samples:, :], axis=0)
-                    #         # Save buffer to an Excel file
-                    
                     print('buffer.shape',buffer.shape, 'type', type(buffer))
-                    
                     
                     df = pd.DataFrame(buffer)
                     df.to_csv(f"buffer_{j}_{n}.csv", index=False)
-                    # print('j',j, 'n',n)  
-                    # print('buffer', buffer) 
-                    # bufferdataframe=pd.DataFrame(buffer)   
-                    # print('bufferdataframe.shape', bufferdataframe.shape)
+             
                     
                     Combined_raw_eeg_nf_bp = np.copy(buffer)
                     num_columns_nf = buffer.shape[1]
+                    filter_states = [None] * num_columns_nf  # Initialize a list to hold states for each column
                     for column in range(num_columns_nf):
-                        Combined_raw_eeg_nf_bp[:, column] = self.butter_bandpass_filter(Combined_raw_eeg_nf_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5)    
-                    combined_raw_eeg_nf_bp=pd.DataFrame(Combined_raw_eeg_nf_bp)
-                    # print('combined_raw_eeg_nf_bp', combined_raw_eeg_nf_bp.shape)
+                        Combined_raw_eeg_nf_bp[:, column], filter_states[column] = self.butter_bandpass_filter(
+                            Combined_raw_eeg_nf_bp[:, column], 
+                            lowcut=.4, 
+                            highcut=40, 
+                            fs=250, 
+                            order=5,
+                            initial_state=filter_states[column])
+
+                    combined_raw_eeg_nf_bp = pd.DataFrame(Combined_raw_eeg_nf_bp)
                     combined_raw_eeg_nf_bp.to_csv(f"bufferbp_{j}_{n}.csv", index=False)
 
                     eeg_df_denoised_nf = self.preprocess(combined_raw_eeg_nf_bp, col_names=list(combined_raw_eeg_nf_bp.columns), n_clusters=[50]*len(combined_raw_eeg_nf_bp.columns))
                     print('type: eeg_df_denoised_nf',type(eeg_df_denoised_nf))
                     denoised_data = eeg_df_denoised_nf.to_numpy()
-                    
-                    
                     denoised=pd.DataFrame(denoised_data)
                     print('denoised',denoised.shape)
                     eeg_df_denoised_nf.to_csv(f"bufferdn_{j}_{n}.csv", index=False)
 
-                    
                     chunks = np.array_split(denoised_data, 5, axis=0)
                     feature=[]
                     scaler = StandardScaler()
@@ -393,15 +386,14 @@ class RootWindow:
                     envelope=np.hstack((envelope, chunks[4]))
                     envelop_standardized = scaler.fit_transform(envelope)
                     envelop_standardized_tr=envelop_standardized.transpose()
-                    pca = PCA(n_components=16)  # how many components you want to keep
+                    pca = PCA(n_components=16)  
                     pca.fit(envelop_standardized_tr)
                     eeg_data_pca = pca.transform(envelop_standardized_tr)
                     feature.append(eeg_data_pca)
                     feature_array=np.array(feature)
                     X_n=feature_array.reshape(-1,16*16)
                     predictions =svm_model.predict(X_n)
-                    # print('predictions', predictions)
-                    # Check if the prediction was correct
+        
                     instruction = self.instruction_mapping[seq_list[self.block]]
                     correct_prediction = (instruction == 'Face' and predictions[0] == 0) or (instruction == 'Scene' and predictions[0] == 1)
                     
@@ -425,7 +417,7 @@ class RootWindow:
                     image_window.update_transparency(new_face_alpha)
 
                     
-                    plt.figure(figsize=(10, 6))  # Adjust the size as necessary
+                    plt.figure(figsize=(10, 6))  
                     for col in df.columns:
                         plt.plot(df[col], label=col, linewidth=0.5) #linestyle=['-', '--', '-.', ':'][i % 4]
                     plt.xlabel('Sample Time')
@@ -434,7 +426,7 @@ class RootWindow:
                     plt.legend()
                     plt.savefig(f'buffer_j={j}_n={n}.png')
 
-                    plt.figure(figsize=(10, 6))  # Adjust the size as necessary
+                    plt.figure(figsize=(10, 6))  
                     for col in combined_raw_eeg_nf_bp.columns:
                         plt.plot(combined_raw_eeg_nf_bp[col], label=col, linewidth=0.5)
                     plt.xlabel('Sample Time')
@@ -453,13 +445,10 @@ class RootWindow:
                     # plt.yscale('log')
                     plt.legend()
                     plt.savefig(f'denoised_j={j}_n={n}.png')
-   
                 del tdata
 
-                # print('j',j)
-        
+
         else: 
-            
             seq_list = [int(x) for x in self.seq if x.isdigit()]
             print(seq_list)
             print('Block',self.block)
@@ -473,79 +462,36 @@ class RootWindow:
             while instruction_samples_collected < instruction_duration_samples:
                 device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
                 instruction_samples_collected += self.FrameLength
-            
-            # for n in range(len(self.randomized_blocks)):
             excel_file_lable = pd.read_csv(f'Block{seq_list[self.block]}_key.csv')
             
-            
-            total_samples = 40 * self.numberOfGetDataCalls
-        
-            key_data = [0] * total_samples
             tdataarray=[]
             tdata=[]
-            # data=[]
-            key2=[]
-              
+            root.update()
             for j in range (0,40):
                     row_data = excel_file_lable.iloc[j,[1, 2, 3]].to_numpy()
-                    # print(row_data)
-                    key=[]
                     image_window.next_image()
                     for i in range(0, self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
-                        # print('j', j, 'i', i)
-                    
-                        if self.key_pressed:
-                            k=1
-                        else:
-                            k=0
-                        
-                        print(i, k)    
-                        key.append(k)
-                        
-                        # Receives the configured number of samples from the Unicorn device and writes it to the acquisition buffer.
                         device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
-
+                        key_pressed = self.key_detector.check_key_press()
                         # Convert receive buffer to numpy float array 
                         dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
                         data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength,
-                
-                        # Concatenate the row_data and data arrays
                         combined_data = np.concatenate((data, row_data))
-                        # combined_data = np.concatenate((combined_data, key_data))
+                        combined_data = np.concatenate((combined_data,[key_pressed]))
                         tdata.append(combined_data)
                         tdataarray = np.array(tdata)
-                        # key_data.append(key_data)
-                        # self.key_pressed = False 
-                        
-                    key2.append(key)
-                    
-                      
-
                     with open('raw_eeg_data_'+str(image_window.curr_block)+'.csv', 'w', newline='') as csvfile:
                         writer = csv.writer(csvfile)
                         for row in tdataarray:
                             writer.writerow(row)   
-                   
-                    # print('Data length',len(tdata) ) 
-                    # print(j)
-                    
-                    
-                    with open('key_'+str(image_window.curr_block)+'.csv', 'w', newline='') as csvfile:
-                        writer = csv.writer(csvfile)
-                        for row in key2:
-                            writer.writerow(row])
-                            
+                    print(j)         
             del tdata
             del tdataarray
-            del key_data
-        
-     
         image_window.pleaseWait_image()   
         self.update_gui()
         self.update_patient_data() 
         device.StopAcquisition() 
-        
-   
+
     ################################################################################################################################    
     ################################################################################################################################
     ################################################################################################################################  

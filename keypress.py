@@ -13,14 +13,18 @@ class KeyPressDetector:
         self.key_pressed = 0  # Reset after checking
         return result
 
-# # Example usage:
-# root = tk.Tk()
+# Example usage:
+root = tk.Tk()
 
-# detector = KeyPressDetector(root)
+detector = KeyPressDetector(root)
 
-# def check():
-#     print(detector.check_key_press())  # This will print 1 if any key was pressed since the last check, and 0 otherwise
-#     # root.after(4, check)  # Check every second
+def check():
+    print(detector.check_key_press())  # This will print 1 if any key was pressed since the last check, and 0 otherwise
+    root.after(200, check)  # Check every second
 
-# check()
-# root.mainloop()
+check()
+root.mainloop()
+
+
+
+

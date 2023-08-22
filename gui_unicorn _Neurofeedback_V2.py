@@ -21,7 +21,7 @@ from sklearn.svm import SVC
 import matplotlib.pyplot as plt
 from scipy.signal import hilbert
 from sklearn.utils import shuffle
-from scipy.signal import butter, filtfilt
+from scipy.signal import butter, filtfilt, lfilter, lfilter_zi
 from tensorflow.keras.models import Sequential
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsRegressor
@@ -243,12 +243,25 @@ class RootWindow:
         b, a = butter(order, [low, high], btype='band')
         return b, a
 
-    def butter_bandpass_filter(self, data, lowcut, highcut, fs, order=5):
-        # print(f'lowcut: {lowcut}, highcut: {highcut}, fs: {fs}, order: {order}')
-        b, a = self.butter_bandpass(lowcut, highcut, fs, order=order)
-        y = filtfilt(b, a, data)
-        return y
+    # def butter_bandpass_filter(self, data, lowcut, highcut, fs, order=5):
+    #     # print(f'lowcut: {lowcut}, highcut: {highcut}, fs: {fs}, order: {order}')
+    #     b, a = self.butter_bandpass(lowcut, highcut, fs, order=order)
+    #     y = filtfilt(b, a, data)
+    #     return y
     
+    
+    #Filter initial state 
+    def butter_bandpass_filter(self, data, lowcut, highcut, fs, order=5, initial_state=None):
+        b, a = self.butter_bandpass(lowcut, highcut, fs, order=order)
+
+        # If no initial state is provided, calculate it.
+        if initial_state is None:
+            zi = lfilter_zi(b, a)
+            initial_state = zi * data[0]
+        
+        y, final_state = lfilter(b, a, data, zi=initial_state)
+        return y, final_state
+        
     
     # Pre-proccessing
     # Denoising 
@@ -361,12 +374,29 @@ class RootWindow:
                     # bufferdataframe=pd.DataFrame(buffer)   
                     # print('bufferdataframe.shape', bufferdataframe.shape)
                     
+                    # Combined_raw_eeg_nf_bp = np.copy(buffer)
+                    # num_columns_nf = buffer.shape[1]
+                    # for column in range(num_columns_nf):
+                    #     Combined_raw_eeg_nf_bp[:, column] = self.butter_bandpass_filter(Combined_raw_eeg_nf_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5)    
+                    # combined_raw_eeg_nf_bp=pd.DataFrame(Combined_raw_eeg_nf_bp)
+                    # # print('combined_raw_eeg_nf_bp', combined_raw_eeg_nf_bp.shape)
+                    # combined_raw_eeg_nf_bp.to_csv(f"bufferbp_{j}_{n}.csv", index=False)
+                    
                     Combined_raw_eeg_nf_bp = np.copy(buffer)
                     num_columns_nf = buffer.shape[1]
+                    filter_states = [None] * num_columns_nf  # Initialize a list to hold states for each column
+
                     for column in range(num_columns_nf):
-                        Combined_raw_eeg_nf_bp[:, column] = self.butter_bandpass_filter(Combined_raw_eeg_nf_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5)    
-                    combined_raw_eeg_nf_bp=pd.DataFrame(Combined_raw_eeg_nf_bp)
-                    # print('combined_raw_eeg_nf_bp', combined_raw_eeg_nf_bp.shape)
+                        Combined_raw_eeg_nf_bp[:, column], filter_states[column] = self.butter_bandpass_filter(
+                            Combined_raw_eeg_nf_bp[:, column], 
+                            lowcut=.4, 
+                            highcut=40, 
+                            fs=250, 
+                            order=5,
+                            initial_state=filter_states[column]
+    )
+
+                    combined_raw_eeg_nf_bp = pd.DataFrame(Combined_raw_eeg_nf_bp)
                     combined_raw_eeg_nf_bp.to_csv(f"bufferbp_{j}_{n}.csv", index=False)
 
                     eeg_df_denoised_nf = self.preprocess(combined_raw_eeg_nf_bp, col_names=list(combined_raw_eeg_nf_bp.columns), n_clusters=[50]*len(combined_raw_eeg_nf_bp.columns))
@@ -474,7 +504,7 @@ class RootWindow:
             key_data=[]
             tdataarray=[]
             tdata=[]
-            data=[]
+            # data=[]
               
             for j in range (0,40):
                     row_data = excel_file_lable.iloc[j,[1, 2, 3]].to_numpy()
@@ -488,7 +518,8 @@ class RootWindow:
                         # Convert receive buffer to numpy float array 
                         dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
                         data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength,
-                        print('data', data)
+                        # print('data', data)
+                        
                         if self.key_pressed:
                             key_data=[1]
                             # self.key_pressed_during_loop = True
@@ -503,7 +534,7 @@ class RootWindow:
                         tdata.append(combined_data)
                         tdataarray=np.array(tdata) 
                     
-                    key_data.append(key_data)     
+                        key_data.append(key_data)     
 
                     with open('raw_eeg_data_'+str(image_window.curr_block)+'.csv', 'w', newline='') as csvfile:
                         writer = csv.writer(csvfile)
@@ -512,7 +543,7 @@ class RootWindow:
                     # print('Data length',len(tdata) ) 
                     # print('Data length',tdataarray.shape)
                     # print(j)
-            del data
+            # del data
             del tdata
             del tdataarray
         
