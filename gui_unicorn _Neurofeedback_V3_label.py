@@ -332,9 +332,12 @@ class RootWindow:
             face_alpha_values = [0,70,128,204,255] 
             face_alpha_index=2
             
-            for j in range (0,2):
+            final_lable_array=[]
+            
+            for j in range (0,8):
                 image_window.start_new_trial()
                 tdata=[]
+                lable=[]
                 for n in range(0,5): #looking at each image for 5 seconds
                     print('n', n)
                     for i in range(self.numberOfGetDataCalls): 
@@ -344,18 +347,15 @@ class RootWindow:
                         tdata.append(data.copy())
                         tdataarray=np.array(tdata)
                     new_totdata_array = tdataarray.reshape(-1, 17)  # Reshape the array into 2D
+                    print('new_totdata_array',type(new_totdata_array), new_totdata_array.shape ) #'numpy.ndarray', (250, 17--1250,17)
+                    
                     Last_data=new_totdata_array[:, :8]
-                 
                     buffer = np.append(buffer, Last_data[-250:, :], axis=0)
                     if buffer.shape[0] > buffer_size_samples:
                         num_extra_samples = buffer.shape[0] - buffer_size_samples
                         buffer = buffer[num_extra_samples:, :]
-                    print('buffer.shape',buffer.shape, 'type', type(buffer))
-                    
                     df = pd.DataFrame(buffer)
                     df.to_csv(f"buffer_{j}_{n}.csv", index=False)
-             
-                    
                     Combined_raw_eeg_nf_bp = np.copy(buffer)
                     num_columns_nf = buffer.shape[1]
                     filter_states = [None] * num_columns_nf  # Initialize a list to hold states for each column
@@ -367,15 +367,11 @@ class RootWindow:
                             fs=250, 
                             order=5,
                             initial_state=filter_states[column])
-
                     combined_raw_eeg_nf_bp = pd.DataFrame(Combined_raw_eeg_nf_bp)
                     combined_raw_eeg_nf_bp.to_csv(f"bufferbp_{j}_{n}.csv", index=False)
-
                     eeg_df_denoised_nf = self.preprocess(combined_raw_eeg_nf_bp, col_names=list(combined_raw_eeg_nf_bp.columns), n_clusters=[50]*len(combined_raw_eeg_nf_bp.columns))
-                    print('type: eeg_df_denoised_nf',type(eeg_df_denoised_nf))
                     denoised_data = eeg_df_denoised_nf.to_numpy()
                     denoised=pd.DataFrame(denoised_data)
-                    print('denoised',denoised.shape)
                     eeg_df_denoised_nf.to_csv(f"bufferdn_{j}_{n}.csv", index=False)
 
                     chunks = np.array_split(denoised_data, 5, axis=0)
@@ -393,10 +389,22 @@ class RootWindow:
                     feature_array=np.array(feature)
                     X_n=feature_array.reshape(-1,16*16)
                     predictions =svm_model.predict(X_n)
-        
                     instruction = self.instruction_mapping[seq_list[self.block]]
                     correct_prediction = (instruction == 'Face' and predictions[0] == 0) or (instruction == 'Scene' and predictions[0] == 1)
                     
+                    label_array = np.zeros((250, 4), dtype=object) 
+                    label_array[:, 0] = 'F' if instruction == 'Face' else 'S'
+                    
+                    for row in range(label_array.shape[0]):
+                        if (instruction == 'Face' and correct_prediction) or (instruction == 'Scene' and not correct_prediction):
+                            label_array[row, 1] = 'F'
+                        elif (instruction == 'Scene' and correct_prediction) or (instruction == 'Face' and not correct_prediction):
+                            label_array[row, 1] = 'S'
+                    
+                    label_array[:, 2] =label_array[:, 1]         
+                    label_array[:, 3] = 1 if correct_prediction else 0
+                    print('label_array',label_array.shape)
+        
                     # Adjust alpha
                     if instruction == 'Face':
                         if correct_prediction:
@@ -415,39 +423,21 @@ class RootWindow:
                     
                     new_face_alpha=face_alpha_values[face_alpha_index]
                     image_window.update_transparency(new_face_alpha)
-
                     
-                    plt.figure(figsize=(10, 6))  
-                    for col in df.columns:
-                        plt.plot(df[col], label=col, linewidth=0.5) #linestyle=['-', '--', '-.', ':'][i % 4]
-                    plt.xlabel('Sample Time')
-                    plt.ylabel('Values')
-                    plt.title(f'buffer_j={j}_n={n}')
-                    plt.legend()
-                    plt.savefig(f'buffer_j={j}_n={n}.png')
-
-                    plt.figure(figsize=(10, 6))  
-                    for col in combined_raw_eeg_nf_bp.columns:
-                        plt.plot(combined_raw_eeg_nf_bp[col], label=col, linewidth=0.5)
-                    plt.xlabel('Sample Time')
-                    plt.ylabel('Values')
-                    plt.title(f'bp_j={j}_n={n}')
-                    plt.legend()
-                    plt.savefig(f'bp=_j={j}_n={n}.png')
-
-                    plt.figure(figsize=(10, 6)) 
-                    for col in eeg_df_denoised_nf.columns: 
-                        # plt.plot(eeg_df_denoised_nf[col], label=col)
-                        plt.plot(eeg_df_denoised_nf[col], label=col, linewidth=0.5)
-                    plt.xlabel('Sample Time')
-                    plt.ylabel('Values')
-                    plt.title(f'denoised_j={j}_n={n}')
-                    # plt.yscale('log')
-                    plt.legend()
-                    plt.savefig(f'denoised_j={j}_n={n}.png')
+                    lable.append(label_array)
+                    nplable=np.array(lable).reshape(-1, 4)
+                    fal = np.concatenate((new_totdata_array, nplable), axis=1)
+                    print('nplable', nplable.shape)
                 del tdata
-
-
+                final_lable_array.append(fal)
+                fl=np.array(final_lable_array).reshape(-1, 21)
+                print('fl', fl.shape)
+                
+            with open('fl_'+str(image_window.curr_block)+'.csv', 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                for row in fl:
+                    writer.writerow(row) 
+    
         else: 
             seq_list = [int(x) for x in self.seq if x.isdigit()]
             print(seq_list)
