@@ -48,7 +48,6 @@ from PIL import Image, ImageDraw, ImageFilter
 
 
 class RootWindow:
-    
     def __init__(self, master):
         self.SamplingRate = UnicornPy.SamplingRate
         self.SerialNumber = 'UN-2021.05.36'
@@ -384,6 +383,16 @@ class RootWindow:
                     
                     Combined_raw_eeg_nf_bp = np.copy(buffer)
                     num_columns_nf = buffer.shape[1]
+                    
+                    
+                    # for column in range(num_columns_nf):
+                    #     Combined_raw_eeg_nf_bp[:, column] = self.butter_bandpass_filter(Combined_raw_eeg_nf_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5)    
+                    # combined_raw_eeg_nf_bp=pd.DataFrame(Combined_raw_eeg_nf_bp)
+                    # # print('combined_raw_eeg_nf_bp', combined_raw_eeg_nf_bp.shape)
+                    # combined_raw_eeg_nf_bp.to_csv(f"bufferbp_{j}_{n}.csv", index=False)
+                    
+                    
+                    
                     filter_states = [None] * num_columns_nf  # Initialize a list to hold states for each column
 
                     for column in range(num_columns_nf):
