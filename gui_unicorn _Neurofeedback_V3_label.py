@@ -49,6 +49,8 @@ from PIL import Image, ImageDraw, ImageFilter
 import threading
 import time
 
+import subprocess
+
 
 # KeyPressDetector class
 class KeyPressDetector:
@@ -102,12 +104,18 @@ class RootWindow:
     
     def create_gui(self, master):
         self.frame_1 = tk.Frame(master)
-
+        self.frame_1.pack()
+        
         self.patient_name_label = tk.Label(self.frame_1, text="Patient Name:", font=15)
         self.patient_name_label.grid(row=1, column=0, pady=15, padx=5)
+        
         self.patient_name_data = tk.StringVar()
-        self.patient_name_entry = tk.Entry(self.frame_1, width=30, font=15)
+        self.patient_name_entry = tk.Entry(self.frame_1, width=30, font=15, textvariable=self.patient_name_data)
         self.patient_name_entry.grid(row=1, column=1, pady=15, padx=5)
+        
+        self.submit_button = tk.Button(self.frame_1, text="Create Folder", command=self.get_patient_name_and_create_folder)
+        self.submit_button.grid(row=1, column=2, pady=15, padx=5)   
+        
 
         self.phase_label = tk.Label(self.frame_1, text="Current Phase:", font=15)
         self.phase_label.grid(row=4, column=0, pady=15, padx=5)
@@ -140,7 +148,13 @@ class RootWindow:
         self.create_trial_but.grid(row=1, column=0, columnspan=2, pady=15, padx=5)
 
         self.start_trial_but = Button(self.frame_2, text="Start Trial", bg="green", font=15, command=self.start_trial_thread) #self.start_trial                           
-        self.start_trial_but.grid(row=4, column=0, pady=15, padx=5)
+        self.start_trial_but.grid(row=4, column=0, pady=15, padx=5)   
+
+        self.start_trial_but = Button(self.frame_2, text="Create Classifier", bg="yellow", font=15, command=self.Create_SVMScript) #self.start_trial                           
+        self.start_trial_but.grid(row=5, column=0, pady=15, padx=5) 
+        
+        self.create_trial_but = Button(self.frame_2, text="Recalibrate SVM", bg="yellow", font=15, command=self.run_RSVMScript)
+        self.create_trial_but.grid(row=5, column=1, columnspan=2, pady=15, padx=5)
 
         self.end_trial_but = Button(self.frame_2, text="End Trial", bg="red", font=15, command=self.end_trial)
         self.end_trial_but.grid(row=4, column=1, pady=15, padx=5)
@@ -171,6 +185,28 @@ class RootWindow:
         # Scale progress to match the range of the progress bar (0-100)
         scaled_progress = (progress / 6) * 100
         self.progress.set(scaled_progress)
+    
+    
+    def get_patient_name_and_create_folder(self):
+        patient_name = self.patient_name_data.get()
+        if patient_name:
+            self.create_patient_folder(patient_name)
+        else:
+            print("Please enter a patient name.")    
+    
+
+    def create_patient_folder(self, patient_name):
+        root_folder = "2-Patient Data"
+        patient_folder = os.path.join(root_folder, patient_name)
+        
+        try:
+            os.makedirs(patient_folder, exist_ok=True)
+            print(f"Folder created: {patient_folder}")
+        except Exception as e:
+            print(f"An error occurred while creating the folder: {e}")
+            
+    
+    
     
                
     def create_trial(self):
@@ -311,6 +347,15 @@ class RootWindow:
         
         global image_window, top
         self.master.focus_set()
+        
+        # Get patient name and create the patient folder
+        patient_name = self.patient_name_data.get()
+        patient_folder = os.path.join("2-Patient Data", patient_name)
+            
+        if not os.path.exists(patient_folder):
+            os.makedirs(patient_folder)
+        
+        
         if self.curr_phase.get() == "Neurofeedback":  
             seq_list = [int(x) for x in self.seq if x.isdigit()]
             print('Block',self.block)
@@ -321,7 +366,9 @@ class RootWindow:
             device.StartAcquisition(False)
         
             # Load the trained SVM model
-            filename = r'C:\Users\tnlab\OneDrive\Documents\GitHub\Neurofeedback-Based-BCI\my_svm_model.joblib'
+            # filename = r'C:\Users\tnlab\OneDrive\Documents\GitHub\Neurofeedback-Based-BCI\my_svm_model.joblib'
+            filename = r'C:\Users\tnlab\OneDrive\Documents\GitHub\AlphaFold\Neurofeedback-Based-BCI\my_svm_model.joblib'
+           
             svm_model = joblib.load(filename)
             
             # Initialize the buffer
@@ -332,8 +379,11 @@ class RootWindow:
             face_alpha_values = [0,70,128,204,255] 
             face_alpha_index=2
             
-            final_lable_array=[]
+            current_directory = os.getcwd()
+            print(f"Current directory: {current_directory}")
             
+            final_lable_array=[]
+
             for j in range (0,8):
                 image_window.start_new_trial()
                 tdata=[]
@@ -432,12 +482,16 @@ class RootWindow:
                 final_lable_array.append(fal)
                 fl=np.array(final_lable_array).reshape(-1, 21)
                 print('fl', fl.shape)
-                
-            with open('fl_'+str(image_window.curr_block)+'.csv', 'w', newline='') as csvfile:
+            
+            csv_filename = f'fl_{image_window.curr_block}.csv'
+            csv_filepath = os.path.join(patient_folder, csv_filename)
+            
+            
+            with open(csv_filepath, 'w', newline='') as csvfile:
                 writer = csv.writer(csvfile)
                 for row in fl:
-                    writer.writerow(row) 
-    
+                    writer.writerow(row)            
+                
         else: 
             seq_list = [int(x) for x in self.seq if x.isdigit()]
             print(seq_list)
@@ -457,6 +511,8 @@ class RootWindow:
             tdataarray=[]
             tdata=[]
             root.update()
+            
+            
             for j in range (0,40):
                     row_data = excel_file_lable.iloc[j,[1, 2, 3]].to_numpy()
                     image_window.next_image()
@@ -469,12 +525,18 @@ class RootWindow:
                         combined_data = np.concatenate((data, row_data))
                         combined_data = np.concatenate((combined_data,[key_pressed]))
                         tdata.append(combined_data)
-                        tdataarray = np.array(tdata)
-                    with open('raw_eeg_data_'+str(image_window.curr_block)+'.csv', 'w', newline='') as csvfile:
+                        tdataarray = np.array(tdata)    
+
+                    # Define the name and path of the .csv file where you want to save the data
+                    csv_filename = f'raw_eeg_data_{image_window.curr_block}.csv'
+                    csv_filepath = os.path.join(patient_folder, csv_filename)
+
+                    with open(csv_filepath, 'w', newline='') as csvfile:
                         writer = csv.writer(csvfile)
                         for row in tdataarray:
-                            writer.writerow(row)   
-                    print(j)         
+                            writer.writerow(row)
+                    
+            print(j)   
             del tdata
             del tdataarray
         image_window.pleaseWait_image()   
@@ -486,6 +548,25 @@ class RootWindow:
     ################################################################################################################################
     ################################################################################################################################  
     
+    def Create_SVMScript(self):
+
+        try:
+            subprocess.run(["python", "RSVM.py"], check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"The RSVM.py script encountered an error: {e}")
+        except FileNotFoundError:
+            print("The RSVM.py script was not found.")
+
+    
+    def run_RSVMScript(self):
+        try:
+            subprocess.run(["python", "RSVM.py"], check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"The RSVM.py script encountered an error: {e}")
+        except FileNotFoundError:
+            print("The RSVM.py script was not found.")
+            
+
     def end_trial(self):
         global image_window
         self.add_patient_data()

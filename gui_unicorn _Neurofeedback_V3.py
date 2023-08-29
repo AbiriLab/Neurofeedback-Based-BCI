@@ -355,7 +355,6 @@ class RootWindow:
                     df = pd.DataFrame(buffer)
                     df.to_csv(f"buffer_{j}_{n}.csv", index=False)
              
-                    
                     Combined_raw_eeg_nf_bp = np.copy(buffer)
                     num_columns_nf = buffer.shape[1]
                     filter_states = [None] * num_columns_nf  # Initialize a list to hold states for each column

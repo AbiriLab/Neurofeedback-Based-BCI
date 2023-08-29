@@ -24,31 +24,24 @@ from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
 ###########################################################################
 
 
+folder_name = input("Please enter the subject name: ")
 
 # Define the column names
 column_names = ['FZ', 'FC1', 'FC2', 'C3', 'CZ', 'C4', 'CPZ', 'PZ', 'AccelX', 'AccelY', 'AccelZ', 'GyroX', 'GyroY', 'GyroZ',
                 'Battery', 'Sample', 'Unknown', 'Instruction', 'Female/Male', 'Outdoor/Indoor', 'Human Behavior']
 df = []
-folder_name = os.getcwd() # Get the current working director
-print('folder', folder_name)
-
 if os.path.exists(folder_name) and os.path.isdir(folder_name):
     for file_name in os.listdir(folder_name):
         if file_name.endswith('.csv'):
             file_path = os.path.join(folder_name, file_name)
             df_temp = pd.read_csv(file_path, header=None)
-            df.append(df_temp)
+            df.append(df_temp)     
+    combined_data_array_3d = np.array(df)
+    combined_data_array_2d= combined_data_array_3d.reshape(combined_data_array_3d.shape[0]*combined_data_array_3d.shape[1], 21)
+    
+Combined_raw_eeg = pd.DataFrame(combined_data_array_2d) 
+Combined_raw_eeg.columns = column_names
 
-    if df:  # Check if df is not empty
-        combined_data_array_3d = np.array(df)
-        combined_data_array_2d = combined_data_array_3d.reshape(-1, 21)
-        
-        Combined_raw_eeg = pd.DataFrame(combined_data_array_2d)
-        Combined_raw_eeg.columns = column_names
-    else:
-        print("No CSV files found in the directory.")
-else:
-    print(f"The directory {folder_name} does not exist.")
 #Excluding the useless columns
 columns_to_remove = ['AccelX', 'AccelY', 'AccelZ', 'GyroX', 'GyroY', 'GyroZ', 'Battery', 'Sample', 'Unknown','Instruction','Female/Male', 'Outdoor/Indoor', 'Human Behavior']
 Combined_raw_eeg = Combined_raw_eeg.drop(columns=columns_to_remove, axis=1)
