@@ -44,7 +44,7 @@ from scipy.signal import hilbert
 from scipy import stats
 ##################################
 from os import listdir
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter,ImageTk
 
 import threading
 import time
@@ -144,20 +144,25 @@ class RootWindow:
 
         self.frame_2 = tk.Frame(master)
 
-        self.create_trial_but = Button(self.frame_2, text="Create Trial", bg="green", font=15, command=self.create_trial)
-        self.create_trial_but.grid(row=1, column=0, columnspan=2, pady=15, padx=5)
+        self.create_trial_but = Button(self.frame_2, text="Create Trial", bg="green", font=("TkDefaultFont", 15), command=self.create_trial)
+        self.create_trial_but.grid(row=1, column=0, columnspan=3, pady=20, padx=5)
 
-        self.start_trial_but = Button(self.frame_2, text="Start Trial", bg="green", font=15, command=self.start_trial_thread) #self.start_trial                           
-        self.start_trial_but.grid(row=4, column=0, pady=15, padx=5)   
+        self.start_trial_but = Button(self.frame_2, text="Start Trial", bg="green",  font=("TkDefaultFont", 15), width=20, command=self.start_trial_thread) #self.start_trial                           
+        self.start_trial_but.grid(row=4, column=0, columnspan=4, pady=8, padx=5)   
 
-        self.start_trial_but = Button(self.frame_2, text="Create Classifier", bg="yellow", font=15, command=self.Create_SVMScript) #self.start_trial                           
+        self.start_trial_but = Button(self.frame_2, text="Create Classifier", bg="yellow", font=10, command=self.Create_SVMScript) #self.start_trial                           
         self.start_trial_but.grid(row=5, column=0, pady=15, padx=5) 
         
-        self.create_trial_but = Button(self.frame_2, text="Recalibrate SVM", bg="yellow", font=15, command=self.run_RSVMScript)
+        self.create_trial_but = Button(self.frame_2, text="Recalibrate SVM", bg="yellow", font=10, command=self.run_RSVMScript)
         self.create_trial_but.grid(row=5, column=1, columnspan=2, pady=15, padx=5)
+        
+        self.end_trial_but = Button(self.frame_2, text="Score", bg="pink", font=("TkDefaultFont", 15), width=20, command=self.HBScore)
+        self.end_trial_but.grid(row=6, column=0, columnspan=4, pady=20, padx=5)    
 
-        self.end_trial_but = Button(self.frame_2, text="End Trial", bg="red", font=15, command=self.end_trial)
-        self.end_trial_but.grid(row=4, column=1, pady=15, padx=5)
+        self.end_trial_but = Button(self.frame_2, text="End Trial", bg="red", font=("TkDefaultFont", 15), width=20, command=self.end_trial)
+        self.end_trial_but.grid(row=7, column=0, columnspan=4, pady=20, padx=5)
+        
+        
 
         self.frame_2.grid(padx=30, pady=50, row=0, column=1)
 
@@ -186,29 +191,55 @@ class RootWindow:
         scaled_progress = (progress / 6) * 100
         self.progress.set(scaled_progress)
     
-    
     def get_patient_name_and_create_folder(self):
         patient_name = self.patient_name_data.get()
         if patient_name:
             self.create_patient_folder(patient_name)
         else:
             print("Please enter a patient name.")    
-    
-
+   
     def create_patient_folder(self, patient_name):
         root_folder = "2-Patient Data"
         patient_folder = os.path.join(root_folder, patient_name)
-        
         try:
             os.makedirs(patient_folder, exist_ok=True)
             print(f"Folder created: {patient_folder}")
+            sub_folders = ["Pre Evaluation", "Post Evaluation", "Neurofeedback"]
+            for sub_folder in sub_folders:
+                sub_folder_path = os.path.join(patient_folder, sub_folder)
+                os.makedirs(sub_folder_path, exist_ok=True)
+                print(f"Sub-folder created: {sub_folder_path}")
         except Exception as e:
             print(f"An error occurred while creating the folder: {e}")
-            
-    
-    
-    
-               
+
+
+                   
+    def HBScore(self):
+        phase = self.curr_phase.get()
+        if phase == "Pre-Evaluation":
+            folder_name = "Pre Evaluation"
+        elif phase == "Post-Evaluation":
+            folder_name = "Post Evaluation"
+        else:
+            print("Phase not set.")
+            return
+
+        patient_name = self.patient_name_data.get()
+        if not patient_name:
+            print("Patient name not set.")
+            return
+
+        image_path = os.path.join("2-Patient Data", patient_name, folder_name, "Score.png")
+        
+        if not os.path.exists(image_path):
+            print("Image file does not exist!")
+            return
+
+        pil_image = Image.open(image_path)
+        pil_image.show()
+        
+        
+        
     def create_trial(self):
         patient_name = self.patient_name_entry.get()
         self.patient_progress[0] = patient_name
@@ -270,8 +301,7 @@ class RootWindow:
             image_window.pleaseWait_image()
             self.image_window_open = True
         top.update()
-        
-        
+           
     ################################################################################################################################    
     ################################################################################################################################
     ################################################################################################################################   
@@ -296,8 +326,6 @@ class RootWindow:
         y, final_state = lfilter(b, a, data, zi=initial_state)
         return y, final_state
         
-    
-    
     # Pre-proccessing
     # Denoising 
     def denoise_data(self, df, col_names, n_clusters):
@@ -336,25 +364,36 @@ class RootWindow:
         df_new = self.denoise_data(df, col_names, n_clusters)
         df_new = self.z_score(df_new, col_names)
         df_new = self.detrend(df_new, col_names)
-        return df_new    
-        
+        return df_new 
 
+    # def preprocess(self, df, col_names, n_clusters):
+    #     if self.curr_phase.get() == "Pre Evaluation":
+    #         return df_new    
+        
+    # def score(self):
+    #     df_new = df.copy()
+    #     df_new = self.denoise_data(df, col_names, n_clusters)
+    #     df_new = self.z_score(df_new, col_names)
+    #     df_new = self.detrend(df_new, col_names)
+    #     return df_new 
+    
+    
     def start_trial_thread(self):
         t = threading.Thread(target=self.start_trial)
         t.start()   
           
     def start_trial(self):
-        
         global image_window, top
         self.master.focus_set()
-        
         # Get patient name and create the patient folder
         patient_name = self.patient_name_data.get()
-        patient_folder = os.path.join("2-Patient Data", patient_name)
-            
+        patient_folder= os.path.join("2-Patient Data", patient_name)
+        pre_folder= os.path.join(patient_folder, "Pre Evaluation")
+        post_folder= os.path.join(patient_folder, "Post Evaluation")
+        neuro_folder= os.path.join(patient_folder, "Neurofeedback")
+      
         if not os.path.exists(patient_folder):
             os.makedirs(patient_folder)
-        
         
         if self.curr_phase.get() == "Neurofeedback":  
             seq_list = [int(x) for x in self.seq if x.isdigit()]
@@ -484,7 +523,7 @@ class RootWindow:
                 print('fl', fl.shape)
             
             csv_filename = f'fl_{image_window.curr_block}.csv'
-            csv_filepath = os.path.join(patient_folder, csv_filename)
+            csv_filepath = os.path.join(neuro_folder, csv_filename)
             
             
             with open(csv_filepath, 'w', newline='') as csvfile:
@@ -527,10 +566,11 @@ class RootWindow:
                         tdata.append(combined_data)
                         tdataarray = np.array(tdata)    
 
-                    # Define the name and path of the .csv file where you want to save the data
                     csv_filename = f'raw_eeg_data_{image_window.curr_block}.csv'
-                    csv_filepath = os.path.join(patient_folder, csv_filename)
-
+                    if self.curr_phase.get() == "Pre-Evaluation":  
+                        csv_filepath = os.path.join(pre_folder, csv_filename)
+                    if self.curr_phase.get() == "Post-Evaluation":  
+                        csv_filepath = os.path.join(post_folder, csv_filename)
                     with open(csv_filepath, 'w', newline='') as csvfile:
                         writer = csv.writer(csvfile)
                         for row in tdataarray:

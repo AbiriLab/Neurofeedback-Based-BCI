@@ -27,41 +27,73 @@ from joblib import dump
 from sklearn.metrics import accuracy_score, classification_report
 import pandas as pd
 
+from PIL import Image, ImageDraw, ImageFont
+
 #############################################################################
 current_directory = os.getcwd()
 patient_data_folder = os.path.join(current_directory, "2-Patient Data")
 
 print(f"Current directory: {current_directory}")
 print(f"Patient data folder: {patient_data_folder}")
-# folder_name = "1"
+
 folder_name = input("Please enter the subject name: ")
 Report_Number = input("Please enter the reprt number: ")
+# Phase = input("Please enter the phase:")
+
 full_folder_path = os.path.join(patient_data_folder, folder_name)
 
 ##########################################################
-
-# Define the column names
 column_names = ['FZ', 'FC1', 'FC2', 'C3', 'CZ', 'C4', 'CPZ', 'PZ', 'AccelX', 'AccelY', 'AccelZ', 'GyroX', 'GyroY', 'GyroZ',
                 'Battery', 'Sample', 'Unknown', 'Instruction', 'Female/Male', 'Outdoor/Indoor', 'Human Behavior']
 df = []
-# Check for existence and read
-if os.path.exists(full_folder_path) and os.path.isdir(full_folder_path):
-    print("path exists")
-    for file_name in os.listdir(full_folder_path):
-        if file_name.endswith('.csv'):
-            file_path = os.path.join(full_folder_path, file_name)
-            df_temp = pd.read_csv(file_path, header=None)
-            df.append(df_temp)     
-    combined_data_array_3d = np.array(df)
-    combined_data_array_2d= combined_data_array_3d.reshape(-1, 21)
-else:
-    print("path does not exist")
-Combined_raw_eeg = pd.DataFrame(combined_data_array_2d) 
-Combined_raw_eeg.columns = column_names
 
-#Excluding the useless columns
+# root_folder = "2-Patient Data"
+sub_folders = ["Pre Evaluation", "Neurofeedback", "Post Evaluation"]
+phase = int(input("Enter the phase (0, 1, 2): "))  # Or however you get the phase value
+
+# Determine which sub-folders to use based on the phase
+folders_to_use = []
+if phase == 0:
+    folders_to_use = [sub_folders[0]]  # Just "Pre Evaluation"
+elif phase == 1:
+    folders_to_use = sub_folders[:2]  # "Pre Evaluation" and "Neurofeedback"
+elif phase == 2:
+    folders_to_use = [sub_folders[2]]  # 
+
+
+print('folders_to_use:', folders_to_use)
+
+# Iterate over each folder to read the csv files
+for folder in folders_to_use:
+    full_folder_path_ = os.path.join(full_folder_path, folder)
+    print(full_folder_path_)
+
+    if os.path.exists(full_folder_path_) and os.path.isdir(full_folder_path_):
+        print(f"Reading from: {full_folder_path_}")
+        for file_name in os.listdir(full_folder_path_):
+            if file_name.endswith('.csv'):
+                file_path = os.path.join(full_folder_path_, file_name)
+                df_temp = pd.read_csv(file_path, header=None)
+                df.append(df_temp)
+        combined_data_array_3d = np.array(df)
+        combined_data_array_2d= combined_data_array_3d.reshape(-1, 21)
+    else:
+        print(f"{full_folder_path_} does not exist")
+
+# # Process the collected data
+# if df:
+#     combined_data_array_3d = np.array(df)
+#     combined_data_array_2d = combined_data_array_3d.reshape(-1, 21)
+Combined_raw_eeg = pd.DataFrame(combined_data_array_2d)
+Combined_raw_eeg.columns = column_names
 columns_to_remove = ['AccelX', 'AccelY', 'AccelZ', 'GyroX', 'GyroY', 'GyroZ', 'Battery', 'Sample', 'Unknown','Instruction','Female/Male', 'Outdoor/Indoor', 'Human Behavior']
+
 Combined_raw_eeg = Combined_raw_eeg.drop(columns=columns_to_remove, axis=1)
+# else:
+#     print("No data found.")
+
+print( 'Combined_raw_eeg',  len(Combined_raw_eeg), type(Combined_raw_eeg))
+
 ##############################################################################
 
 # Band pass filter
@@ -126,35 +158,86 @@ def preprocess(df, col_names, n_clusters):
 Combined_raw_eeg_bp=pd.DataFrame(Combined_raw_eeg_bp)
 eeg_df_denoised = preprocess(Combined_raw_eeg_bp, col_names=list(Combined_raw_eeg_bp.columns), n_clusters=[50]*len(Combined_raw_eeg_bp.columns))
 ##################################################################################################################################################
-
 # Lableing
-column_indices = {'Instruction': 17, 'Female/Male': 18, 'Outdoor/Indoor': 19}
+column_indices = {'Instruction': 17, 'Female/Male': 18, 'Outdoor/Indoor': 19, 'Human Behavior':20 }
+selected_columns_HB = [column_indices['Instruction'], column_indices['Female/Male'], column_indices['Outdoor/Indoor'], column_indices['Human Behavior']]
 selected_columns = [column_indices['Instruction'], column_indices['Female/Male'], column_indices['Outdoor/Indoor']]
+
 data_im_ins = combined_data_array_2d[:, selected_columns]
+data_im_ins_HB=combined_data_array_2d[:, selected_columns_HB]
 denoised_im_ins = np.concatenate((eeg_df_denoised, data_im_ins), axis=1)
+denoised_im_ins_HB = np.concatenate((eeg_df_denoised, data_im_ins_HB), axis=1)
+
+SCORE = []
+for row in denoised_im_ins_HB:
+    condition1 = (row[-4] == row[-3]) or (row[-4] == row[-2])
+    condition2 = row[-1] == 1
+    condition3 = (row[-4] != row[-3]) and (row[-4] != row[-2])
+    condition4 = row[-1] == 0
+    if (condition1 and condition2) or (condition3 and condition4):
+        SCORE.append([1])
+    else:
+        SCORE.append([0])
+
+print('score length', len(SCORE))
+#score
+win_size = 250
+S = []
+for i in range(0, len(SCORE), win_size):
+    S_data = SCORE[i:i+win_size]
+    S.append(S_data)
+# print('s lenght', len(S))
+# print(S)
+S_np = np.array(S)
+print('S_np shape', S_np.shape)
+result_list = []
+
+# Iterate through the "images" (first dimension)
+for i in range(S_np.shape[0]):
+    # Check if all 250 samples are 0
+    if np.all(S_np[i, :, 0] == 0):
+        result_list.append(0)
+    else:
+        result_list.append(1)
+print(result_list)
+
+mean_value = sum(result_list) / len(result_list)
+print("Mean of result list:", mean_value)
+percentage_of_ones = mean_value * 100
+rounded_percentage_of_ones = round(percentage_of_ones)
+n=str(rounded_percentage_of_ones)
+print('n', n)
+img=Image.new('RGB', (1000,1000), color=(73,109,137))
+d=ImageDraw.Draw(img)
+font_0=ImageFont.truetype("arial.ttf", 500)
+font_1=ImageFont.truetype("arial.ttf", 150)
+
+d.text((150,50), "Your Score", font=font_1, fill=(255,255,0))
+d.text((250,250), n, font=font_0, fill=(255,255,0))
+img_file_name = f"Score.png"
+img_file_path = os.path.join(full_folder_path_, img_file_name) 
+
+
+# img.save('report_file_name.png')
+img.save(img_file_path, index=False)
 
 # Check the third last column (column 9) and keep rows if column 9 is equal to 1
 filtered_denoised_im_ins = denoised_im_ins[(denoised_im_ins[:, -3] == denoised_im_ins[:, -2]) | (denoised_im_ins[:, -3] == denoised_im_ins[:, -1])]
 filtered_denoised_im_ins_df = pd.DataFrame(filtered_denoised_im_ins)
+
+
 
 # Create a new column 'event'
 filtered_denoised_im_ins_df['event'] = ''
 for index, row in filtered_denoised_im_ins_df.iterrows():
     if row.iloc[-4] == 'F' or row.iloc[-4] == 'M':
         filtered_denoised_im_ins_df.at[index, 'event'] = '0'
-    else:  #elif row.iloc[-4] == 'I' or row.iloc[-4] == 'O' or row.iloc[-4] == 'S':
+    else: 
         filtered_denoised_im_ins_df.at[index, 'event'] = '1'
         
 selected_data = filtered_denoised_im_ins_df.iloc[:, :8]  
 lable=filtered_denoised_im_ins_df.iloc[:, -1:]
 ##################################################
-
-
-
-
-
-
-
 
 win_size = 250
 X = []
@@ -173,7 +256,7 @@ X, y = shuffle(X, y)
 
 array_3d = X.reshape(X.shape[0], 250*8)
 # print(array_3d.shape)
-# print(X.shape)
+print('X.shape', X.shape)
 ##############
 
 # Hilbert feature extraction and PCA data Reduction
@@ -243,5 +326,5 @@ report_svm = classification_report(y_test, y_pred, output_dict=True)
 report_df_svm = pd.DataFrame(report_svm).transpose()
 report_df_svm.loc['accuracy', :] = [accuracy, None, None, None]
 report_file_name = f"Report_{Report_Number}.xlsx"  # This becomes "Report_001.xlsx"
-full_file_path = os.path.join(full_folder_path, report_file_name)  
+full_file_path = os.path.join(full_folder_path_, report_file_name)  
 report_df_svm.to_excel(full_file_path, index=False)
