@@ -170,7 +170,7 @@ class RootWindow:
         h.getData(self.SamplingRate)
         
         #saves the EEG file below as csv, file name will be what's in the open()
-        with open('test_trail_3_eeg_data_'+str(image_window.curr_block)+'.csv', 'w', newline='') as csvfile:
+        with open('eeg_data_'+str(image_window.curr_block)+'.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             key = pd.read_csv('Images/Composite_Images_key/Block'+self.patient_progress[4][(image_window.curr_block-1)*2]+'_key.csv').to_numpy()
             for i in range(len(data)):
@@ -234,6 +234,7 @@ class EEG_Headset:
             #devices = dev_names[1] + ',' + dev_names[0]
             print('master,slave = ', devices)
             self.d=g.GDS(devices)
+            hb=[]
             if len(dev_names) == 2:
                 trig = 0
                 for c in self.d.Configs:
@@ -241,10 +242,11 @@ class EEG_Headset:
                     c.NumberOfScans = 1
                     c.CommonGround = [1] * 4
                     c.CommonReference = [1] * 4
-                    c.ShortCutEnabled = 1
+                    c.ShortCutEnabled =1
                     c.CounterEnabled = 0
                     if trig == 1:
                         c.TriggerEnabled = 1
+                        
                     acquireHelp = 0
                     for ch in c.Channels:
                         ch.Acquire = 1 # if acquireHelp == 0 else 0
@@ -277,8 +279,10 @@ class EEG_Headset:
 
     def getData(self, BLOCKSIZE):
         print('Collecting data')
+        # if hasattr(self, 'd'):
         temp = self.d.GetData(BLOCKSIZE, GetDataCallback)
-
+        # else:
+        #     print('Device not configured or failed to connect')
 def GetDataCallback(dataBlock):
     global h, image_window, top, data
     try:
@@ -299,6 +303,7 @@ def GetDataCallback(dataBlock):
         top.update()
         print('Done')
         return False
+    
 
 if __name__ == "__main__":
     global h

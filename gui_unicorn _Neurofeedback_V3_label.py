@@ -211,9 +211,7 @@ class RootWindow:
                 print(f"Sub-folder created: {sub_folder_path}")
         except Exception as e:
             print(f"An error occurred while creating the folder: {e}")
-
-
-                   
+           
     def HBScore(self):
         phase = self.curr_phase.get()
         if phase == "Pre-Evaluation":
@@ -237,9 +235,7 @@ class RootWindow:
 
         pil_image = Image.open(image_path)
         pil_image.show()
-        
-        
-        
+           
     def create_trial(self):
         patient_name = self.patient_name_entry.get()
         self.patient_progress[0] = patient_name
@@ -273,8 +269,7 @@ class RootWindow:
         self.add_patient_data()
         self.open_image_win()
         # self.update_gui()
-
-        
+    
     def add_patient_data(self):
         with open('pat_progess_v2.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
