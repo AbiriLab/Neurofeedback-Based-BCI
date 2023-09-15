@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import pygds as g
 from image_display_gt import *
+import time
 
 #main GUI window
 class RootWindow:
@@ -165,8 +166,7 @@ class RootWindow:
         data = []
         image_window.instructions_image()
         top.update()
-        #add delay here to increase the duration of the instructions to user
-        
+        time.sleep(5)
         h.getData(self.SamplingRate)
         
         #saves the EEG file below as csv, file name will be what's in the open()

@@ -76,6 +76,7 @@ for folder in folders_to_use:
                 df_temp = pd.read_csv(file_path, header=None)
                 df.append(df_temp)
         combined_data_array_3d = np.array(df)
+        print('combined_data_array_3d.shape', combined_data_array_3d.shape)
         combined_data_array_2d= combined_data_array_3d.reshape(-1, 21)
     else:
         print(f"{full_folder_path_} does not exist")
