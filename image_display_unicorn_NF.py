@@ -93,7 +93,7 @@ class DisplayImagenf:
     def next_image(self, img=None, face_alpha=.5):
         next_img = img if img is not None else self.create_composite_img(face_alpha)
         # Resize and convert to PhotoImage
-        next_img_resized = next_img.resize((800, 600), Image.Resampling.LANCZOS)
+        next_img_resized = next_img.resize((960, 720), Image.Resampling.LANCZOS)
         photo_img = ImageTk.PhotoImage(next_img_resized)
         # Update the label
         self.label.config(image=photo_img)
@@ -119,7 +119,7 @@ class DisplayImagenf:
         instruct_order = self.instruct_order
         target = instruct_order[self.curr_block]
         instruction_img = Image.open(os.path.join(base_dir_ins, f"instruction_{target}.png"))
-        inst_img_resized = instruction_img.resize((800, 600), Image.Resampling.LANCZOS)
+        inst_img_resized = instruction_img.resize((960, 720), Image.Resampling.LANCZOS)
         photo_img = ImageTk.PhotoImage(inst_img_resized)
         self.label.config(image=photo_img)
         self.label.image = photo_img
@@ -127,10 +127,13 @@ class DisplayImagenf:
 
     def pleaseWait_image(self):
         next_img = Image.open(f"Images/please-wait.png")   
-        next_img_resized = next_img.resize((800, 600), Image.Resampling.LANCZOS)
+        next_img_resized = next_img.resize((960, 720), Image.Resampling.LANCZOS)
         photo_img = ImageTk.PhotoImage(next_img_resized)
-        self.label.config(image=photo_img)
+        self.label.config(image=photo_img, width=1900, height=950, anchor=CENTER)
+        # self.label.config(image=photo_img)
         self.label.image = photo_img
+        
+
         
 
        

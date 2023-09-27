@@ -48,6 +48,33 @@ import threading
 import time
 import subprocess
 from screeninfo import get_monitors
+###############################################################################################
+from numpy import unwrap, diff, abs, angle
+import pandas as pd
+import seaborn as sns
+import tensorflow as tf
+from sklearn.svm import SVC
+import matplotlib.pyplot as plt
+from scipy.signal import hilbert
+from sklearn.utils import shuffle
+import scipy
+from scipy.signal import butter, filtfilt, hilbert
+from scipy.interpolate import interp1d
+from scipy.interpolate import CubicSpline
+from tensorflow.keras.models import Sequential
+from sklearn.model_selection import GridSearchCV
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.metrics import classification_report
+from imblearn.over_sampling import RandomOverSampler
+from sklearn.model_selection import train_test_split
+from keras.wrappers.scikit_learn import KerasClassifier
+from tensorflow.keras.optimizers import Adam, SGD, RMSprop
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from tensorflow.keras.layers import Dense,  BatchNormalization, Dropout
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+import mne
+from mne.preprocessing import ICA
 
 # KeyPressDetector class
 class KeyPressDetector:
@@ -115,7 +142,6 @@ class RootWindow:
         self.submit_button = tk.Button(self.frame_1, text="Create Folder", command=self.get_patient_name_and_create_folder)
         self.submit_button.grid(row=1, column=2, pady=15, padx=5)   
         
-
         self.phase_label = tk.Label(self.frame_1, text="Current Phase:", font=15)
         self.phase_label.grid(row=4, column=0, pady=15, padx=5)
         self.curr_phase = tk.StringVar()
@@ -216,20 +242,17 @@ class RootWindow:
         else:
             print("Phase not set.")
             return
-
         patient_name = self.patient_name_data.get()
         if not patient_name:
             print("Patient name not set.")
             return
-
         image_path = os.path.join("2-Patient Data", patient_name, folder_name, "Score.png")
-        
         if not os.path.exists(image_path):
             print("Image file does not exist!")
             return
-
         pil_image = Image.open(image_path)
         pil_image.show()
+    
            
     def create_trial(self):
         patient_name = self.patient_name_entry.get()
@@ -255,7 +278,6 @@ class RootWindow:
                 self.open_image_win()
                 self.start_trial_but.config(state="normal")
                 return
-        
         self.pre_eval, self.neuro, self.post_eval = 0, 0, 0
         self.seq = " ".join(str(x) for x in randomized_blocks)
         self.patient_progress[4] = self.seq
@@ -276,14 +298,12 @@ class RootWindow:
         if len(monitors) < 2:
             print('Just one monitor has been detected')
             return None
-        
         second_monitor = monitors[1]  # assuming the second monitor is the second in the list
         width = second_monitor.width
         height = second_monitor.height
         x = second_monitor.x
         y = second_monitor.y
         print('The second monitor has been detected')
-
         # return the center position for an 800x600 window
         return "%dx%d+%d+%d" % (1600, 1200, x + (width - 1600) // 2, y + (height - 1200) // 2)
 
@@ -335,23 +355,18 @@ class RootWindow:
         b, a = butter(order, [low, high], btype='band')
         return b, a
 
-    #Filter initial state 
     def butter_bandpass_filter(self, data, lowcut, highcut, fs, order=5, initial_state=None):
         b, a = self.butter_bandpass(lowcut, highcut, fs, order=order)
-
         # If no initial state is provided, calculate it.
         if initial_state is None:
             zi = lfilter_zi(b, a)
             initial_state = zi * data[0]
-        
         y, final_state = lfilter(b, a, data, zi=initial_state)
         return y, final_state
-        
-    # Pre-proccessing
-    # Denoising 
+
+
     def denoise_data(self, df, col_names, n_clusters):
         df_denoised = df.copy()
-        df_denoised.reset_index(drop=True, inplace=True)
         for col_name, k in zip(col_names, n_clusters):
             df_denoised[col_name] = pd.to_numeric(df_denoised[col_name], errors='coerce') # Convert column to numeric format
             X = df_denoised.select_dtypes(include=['float64', 'int64']) # Select only numeric columns
@@ -361,15 +376,13 @@ class RootWindow:
             df_denoised[col_name] = y_pred
         return df_denoised
 
-    # Z_scoring
     def z_score(self, df, col_names):
         df_standard = df.copy()
         for col in col_names:
             df_standard[col] = (df[col] - df[col].mean()) / df[col].std()
         return df_standard
 
-    # Detrending
-    def detrend(self, df, col_names):
+    def custom_detrend(self, df, col_names):
         df_detrended = df.copy()
         for col in col_names:
             y = df_detrended[col]
@@ -384,9 +397,99 @@ class RootWindow:
         df_new = df.copy()
         df_new = self.denoise_data(df, col_names, n_clusters)
         df_new = self.z_score(df_new, col_names)
-        df_new = self.detrend(df_new, col_names)
-        return df_new 
+        df_new = self.custom_detrend(df_new, col_names)
+        return df_new
+
+    def reject_artifacts(self, df, channel):
+        threshold_factor =3
+        median = df[channel].median()
+        mad = np.median(np.abs(df[channel] - median))
+        spikes = np.abs(df[channel] - median) > threshold_factor * mad
+        x = np.arange(len(df[channel]))
+        cs = CubicSpline(x[~spikes], df[channel][~spikes])    # Interpolate using Cubic Spline
+        interpolated_values = cs(x)
+        interpolated_values[spikes] *= 0.1  # Make interpolated values 0.001 times smaller
+        df[channel] = interpolated_values
+        return df
+
+    def reject_artifacts_DN(self, df, channel):
+        threshold_factor =5
+        median = df[channel].median()
+        mad = np.median(np.abs(df[channel] - median))
+        spikes = np.abs(df[channel] - median) > threshold_factor * mad
+        x = np.arange(len(df[channel]))
+        cs = CubicSpline(x[~spikes], df[channel][~spikes])    # Interpolate using Cubic Spline
+        interpolated_values = cs(x)
+        interpolated_values[spikes] *= 0.5  # Make interpolated values 0.001 times smaller
+        df[channel] = interpolated_values
+        return df
     
+    def extract_ERP_features(self, epoch):
+        c=(50/1000)
+        N180_window = (int(160*c),int(200*c))
+        P300_window = (int(280*c),int(320*c)) 
+        N500_window = (int(480*c), int(520*c))
+        N600_window = (int(580*c), int(620*c))
+        P700_window = (int(680*c),int(720*c))
+        P900_window = (int(880*c),int(920*c))
+        N180_region = epoch[N180_window[0]:N180_window[1]]
+        P300_region = epoch[P300_window[0]:P300_window[1]]
+        N500_region = epoch[N500_window[0]:N500_window[1]]
+        N600_region = epoch[N600_window[0]:N600_window[1]]
+        P700_region = epoch[P700_window[0]:P700_window[1]]
+        P900_region = epoch[P900_window[0]:P900_window[1]]
+        N180_mean_amplitude = np.mean(N180_region)
+        P300_mean_amplitude = np.mean(P300_region)
+        N500_mean_amplitude = np.mean(N500_region)        
+        N600_mean_amplitude = np.mean(N600_region)
+        P700_mean_amplitude = np.mean(P700_region)        
+        P900_mean_amplitude = np.mean(P900_region)
+        return [N180_mean_amplitude, P300_mean_amplitude, N500_mean_amplitude, N600_mean_amplitude, P700_mean_amplitude, P900_mean_amplitude]
+
+    def apply_bandpass_filter(self, signal, lowcut, highcut, fs, order=5):
+        nyquist = 0.5 * fs
+        low = lowcut / nyquist
+        high = highcut / nyquist
+        b, a = butter(order, [low, high], btype='band')
+        filtered_signal = filtfilt(b, a, signal)
+        return filtered_signal
+
+    def extract_ERP_for_band(self, signal, band_limits, fs=250):
+        band_filtered_signal = self.apply_bandpass_filter(signal, band_limits[0], band_limits[1], fs)
+        return self.extract_ERP_features(band_filtered_signal)
+
+    def extract_all_band_ERPs(self, signal, frequency_bands):
+        all_band_features = {}
+        for band_name, band_limits in frequency_bands.items():
+            all_band_features[band_name] = self.extract_ERP_for_band(signal, band_limits)
+        return all_band_features
+
+    def extract_all_band_ERPs_to_array(self, signal, frequency_bands):
+        all_band_features_list = []
+        for band_name, band_limits in frequency_bands.items():
+            erp_features_for_band = self.extract_ERP_for_band(signal, band_limits)
+            all_band_features_list.extend(erp_features_for_band)
+        return np.array(all_band_features_list)
+
+    def calculate_hilbert_features(self, signal, fs):
+        analytic_signal = hilbert(signal)
+        amplitude_envelope = np.abs(analytic_signal)
+        mean_amplitude_envelope=np.mean(amplitude_envelope)
+        return mean_amplitude_envelope
+
+    def extract_hilbert_features(self, dataset, fs):
+        n_channels = 8
+        sampling_rate = 250
+        all_hilbert_features = []
+        for sample in dataset:
+            channel_features = []
+            for ch in range(n_channels):
+                signal = sample[ch * sampling_rate: (ch + 1) * sampling_rate]
+                amplitude_envelope= self.calculate_hilbert_features(signal, fs)
+                channel_features.append([np.mean(amplitude_envelope) ])
+            all_hilbert_features.append(channel_features)
+        return np.array(all_hilbert_features)
+                
     def start_trial_thread(self):
         t = threading.Thread(target=self.start_trial)
         t.start()   
@@ -399,6 +502,8 @@ class RootWindow:
         pre_folder= os.path.join(patient_folder, "Pre Evaluation")
         post_folder= os.path.join(patient_folder, "Post Evaluation")
         neuro_folder= os.path.join(patient_folder, "Neurofeedback")
+        frequency_bands = {'delta': (0.5, 4),'theta': (4, 8),'alpha': (8, 14),'beta': (14, 30),'gamma': (30, 40),'ERP':(0.4,40)}
+        fs=250
       
         if not os.path.exists(patient_folder):
             os.makedirs(patient_folder)
@@ -424,12 +529,16 @@ class RootWindow:
             face_alpha_index=2
             
             current_directory = os.getcwd()
+            
             print(f"Current directory: {current_directory}")
             
             final_lable_array=[]
-
+            raw=[]
+            # event=[]
+            PP=[]
             for j in range (0,8):
                 image_window.start_new_trial()
+                selected_columns = ['Fz', 'FC1', 'FC2', 'C3', 'Cz', 'C4', 'CPz', 'Pz']
                 tdata=[]
                 lable=[]
                 for n in range(0,5): #looking at each image for 5 seconds
@@ -439,53 +548,87 @@ class RootWindow:
                         dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
                         data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength
                         tdata.append(data.copy())
-                        tdataarray=np.array(tdata)
-                    new_totdata_array = tdataarray.reshape(-1, 17)  # Reshape the array into 2D
-                    print('new_totdata_array',type(new_totdata_array), new_totdata_array.shape ) #'numpy.ndarray', (250, 17--1250,17)
-                    
+                        tdataarray=np.array(tdata)    
+                    new_totdata_array = tdataarray.reshape(-1, 17) 
+                    # print('new_totdata_array',type(new_totdata_array), new_totdata_array.shape ) #'numpy.ndarray', (250, 17--1250,17)
+                    # inst = new_totdata_array[:, 16]
+                    # event.append(inst)
                     Last_data=new_totdata_array[:, :8]
+                    # Last_data.columns = selected_columns 
+                    raw.append(Last_data)
+
                     buffer = np.append(buffer, Last_data[-250:, :], axis=0)
                     if buffer.shape[0] > buffer_size_samples:
                         num_extra_samples = buffer.shape[0] - buffer_size_samples
                         buffer = buffer[num_extra_samples:, :]
                     df = pd.DataFrame(buffer)
-                    df.to_csv(f"buffer_{j}_{n}.csv", index=False)
                     Combined_raw_eeg_nf_bp = np.copy(buffer)
+                    
                     num_columns_nf = buffer.shape[1]
                     filter_states = [None] * num_columns_nf  # Initialize a list to hold states for each column
                     for column in range(num_columns_nf):
                         Combined_raw_eeg_nf_bp[:, column], filter_states[column] = self.butter_bandpass_filter(
-                            Combined_raw_eeg_nf_bp[:, column], 
-                            lowcut=.4, 
-                            highcut=40, 
-                            fs=250, 
-                            order=5,
-                            initial_state=filter_states[column])
+                            Combined_raw_eeg_nf_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5, initial_state=filter_states[column])
                     combined_raw_eeg_nf_bp = pd.DataFrame(Combined_raw_eeg_nf_bp)
-                    combined_raw_eeg_nf_bp.to_csv(f"bufferbp_{j}_{n}.csv", index=False)
-                    eeg_df_denoised_nf = self.preprocess(combined_raw_eeg_nf_bp, col_names=list(combined_raw_eeg_nf_bp.columns), n_clusters=[50]*len(combined_raw_eeg_nf_bp.columns))
-                    denoised_data = eeg_df_denoised_nf.to_numpy()
-                    denoised=pd.DataFrame(denoised_data)
-                    eeg_df_denoised_nf.to_csv(f"bufferdn_{j}_{n}.csv", index=False)
+                    # combined_raw_eeg_nf_bp.to_csv(f"bufferbp_{j}_{n}.csv", index=False)
+                    # print('combined_raw_eeg_nf_bp', type(combined_raw_eeg_nf_bp), combined_raw_eeg_nf_bp.shape)
+                    
+                    # 2. Artifact rejection
+                    BP_artifact_RJ = combined_raw_eeg_nf_bp.copy()
+                    initial_BP_artifact_RJ = BP_artifact_RJ.iloc[:-(n+1)*250]
+                    # print('initial_BP_artifact_RJ', initial_BP_artifact_RJ.shape)
+                    # print('BP_artifact_RJ ', type(BP_artifact_RJ ))
+                    for channel in range (8):
+                        BP_artifact_RJ= self.reject_artifacts(BP_artifact_RJ.iloc[-(n+1)*250:], channel)
+                    # print('BP_artifact_RJ', type(BP_artifact_RJ), BP_artifact_RJ.shape)
+                    
+                    # 3. Smoothing
+                    BP_artifact_RJ_SM=BP_artifact_RJ.copy()
+                    window_size = 10 
+                    for channel in range (8):
+                        BP_artifact_RJ_SM= BP_artifact_RJ_SM.rolling(window=window_size, center=True).mean().fillna(method='bfill').fillna(method='ffill')                
+                    # print('BP_artifact_RJ_SM', type(BP_artifact_RJ_SM), BP_artifact_RJ_SM.shape)
+                    DN=pd.concat([initial_BP_artifact_RJ, BP_artifact_RJ_SM], axis=0)
+                    # print('DN', DN.shape, DN)
+                    # 4. Denoising and other preprocessing
+                    DN.columns = selected_columns
+                    eeg_df_denoised = self.preprocess(DN, col_names=selected_columns, n_clusters=[50]*len(selected_columns))
+                    # print('eeg_df_denoised', type(eeg_df_denoised), eeg_df_denoised, eeg_df_denoised.shape )
+                            
 
-                    chunks = np.array_split(denoised_data, 5, axis=0)
-                    feature=[]
-                    scaler = StandardScaler()
-                    analytic_signal = hilbert(chunks[4])
-                    envelope = np.abs(analytic_signal)
-                    envelope=np.hstack((envelope, chunks[4]))
-                    envelop_standardized = scaler.fit_transform(envelope)
-                    envelop_standardized_tr=envelop_standardized.transpose()
-                    pca = PCA(n_components=16)  
-                    pca.fit(envelop_standardized_tr)
-                    eeg_data_pca = pca.transform(envelop_standardized_tr)
-                    feature.append(eeg_data_pca)
-                    feature_array=np.array(feature)
-                    X_n=feature_array.reshape(-1,16*16)
+                    chunks = np.array_split(eeg_df_denoised.to_numpy(), 5, axis=0)
+                    # print('chunks', chunks)
+                    
+                    print('chunks[4]',chunks[4].shape)
+                    eeg_signal = chunks[4].reshape(8, 250)  # reshaped to (8, 250)
+                    print('eeg_signal', eeg_signal.shape)
+                    Hil_feature_for_sample = []
+                    Power_feature_for_sample = []
+                    for channel in range(8):
+                        channel_signal = eeg_signal[channel, :]
+                        hilbert_for_channel=[]
+                        power_for_channel = []
+                        for band, (low, high) in frequency_bands.items():
+                            filtered_signal = self.apply_bandpass_filter(channel_signal, low, high, fs)
+                            hilbert_features = self.calculate_hilbert_features(filtered_signal, fs)
+                            mean_amplitude = np.mean((filtered_signal)**2)
+                            power_for_channel.append(mean_amplitude)
+                            # print('hilbert_features', hilbert_features)
+                            hilbert_for_channel.append(hilbert_features) 
+                        Hil_feature_for_sample.append(hilbert_for_channel)
+                        Power_feature_for_sample.append(power_for_channel)
+                    BP_Power_FE_np = np.array(Power_feature_for_sample)     
+                    Hil_FE_np=np.array(Hil_feature_for_sample)
+                    print('Hil_FE_np', Hil_FE_np.shape)
+                    
+                    ERP_FE = np.array([self.extract_ERP_features(eeg_signal[j, :]) for j in range(8)])
+                    print(ERP_FE.shape)
+                    combined_features = np.concatenate([Hil_FE_np, BP_Power_FE_np, ERP_FE], axis=1)
+                    X_n=combined_features.reshape(-1,144)
                     predictions =svm_model.predict(X_n)
                     instruction = self.instruction_mapping[seq_list[self.block]]
                     correct_prediction = (instruction == 'Face' and predictions[0] == 0) or (instruction == 'Scene' and predictions[0] == 1)
-                    
+
                     label_array = np.zeros((250, 4), dtype=object) 
                     label_array[:, 0] = 'F' if instruction == 'Face' else 'S'
                     
@@ -539,7 +682,7 @@ class RootWindow:
         else: 
             seq_list = [int(x) for x in self.seq if x.isdigit()]
             print(seq_list)
-            print('Block',self.block)
+            print('Trial',self.block)
             print('randomized_blocks:',seq_list[self.block])
             image_window.instructions_image()
             top.update()
@@ -595,20 +738,20 @@ class RootWindow:
     def Create_SVMScript(self):
 
         try:
-            subprocess.run(["python", "RSVM.py"], check=True)
+            subprocess.run(["python", "RSVM_V1.py"], check=True)
         except subprocess.CalledProcessError as e:
-            print(f"The RSVM.py script encountered an error: {e}")
+            print(f"The RSVM_V1.py script encountered an error: {e}")
         except FileNotFoundError:
-            print("The RSVM.py script was not found.")
+            print("The RSVM_V1.py script was not found.")
 
     
     def run_RSVMScript(self):
         try:
-            subprocess.run(["python", "RSVM.py"], check=True)
+            subprocess.run(["python", "RSVM_V1.py"], check=True)
         except subprocess.CalledProcessError as e:
-            print(f"The RSVM.py script encountered an error: {e}")
+            print(f"The RSVM_V1.py script encountered an error: {e}")
         except FileNotFoundError:
-            print("The RSVM.py script was not found.")
+            print("The RSVM_V1.py script was not found.")
             
 
     def end_trial(self):
@@ -679,7 +822,7 @@ class RootWindow:
         tdataarray=[]
         tdata=[]
         root.update()
-        for j in range (0,3):
+        for j in range (0,40):
             row_data = excel_file_lable.iloc[j,[1, 2, 3]].to_numpy()
             self.image_window.next_image()
             for i in range(0, self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250

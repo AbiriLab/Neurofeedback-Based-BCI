@@ -452,6 +452,7 @@ class RootWindow:
                     df.to_csv(f"buffer_{j}_{n}.csv", index=False)
                     Combined_raw_eeg_nf_bp = np.copy(buffer)
                     num_columns_nf = buffer.shape[1]
+                    
                     filter_states = [None] * num_columns_nf  # Initialize a list to hold states for each column
                     for column in range(num_columns_nf):
                         Combined_raw_eeg_nf_bp[:, column], filter_states[column] = self.butter_bandpass_filter(
@@ -461,6 +462,7 @@ class RootWindow:
                             fs=250, 
                             order=5,
                             initial_state=filter_states[column])
+                             
                     combined_raw_eeg_nf_bp = pd.DataFrame(Combined_raw_eeg_nf_bp)
                     combined_raw_eeg_nf_bp.to_csv(f"bufferbp_{j}_{n}.csv", index=False)
                     eeg_df_denoised_nf = self.preprocess(combined_raw_eeg_nf_bp, col_names=list(combined_raw_eeg_nf_bp.columns), n_clusters=[50]*len(combined_raw_eeg_nf_bp.columns))
@@ -556,7 +558,7 @@ class RootWindow:
             tdata=[]
             root.update()
             
-            for j in range (0,40):
+            for j in range (0,4):
                     row_data = excel_file_lable.iloc[j,[1, 2, 3]].to_numpy()
                     image_window.next_image()
                     for i in range(0, self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250

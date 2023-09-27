@@ -65,15 +65,18 @@ class DisplayImage:
 
     def instructions_image(self):  # prob pass in block number( or self.randomized _blocks) and then show the image associated with it so when self.pause is true could show this image instead
         instruct_order = self.instruct_order
+        print('instruct_order :', instruct_order )
         
         if not self.single_block:
+            print('self.curr_block', self.curr_block)
             target = instruct_order[self.curr_block]
+            print('target', target)
             instruction_img = Image.open(f"Images/Instruction Images/instruction_{target}.png")
             inst_img_resized = instruction_img.resize((960, 720), Image.Resampling.LANCZOS)
             photo_img = ImageTk.PhotoImage(inst_img_resized)
             self.label.config(image=photo_img)
             self.label.image = photo_img
-            self.curr_block = self.curr_block + 1
+            # self.curr_block = self.curr_block + 1
         else:
             target = instruct_order
             instruction_img = Image.open(f"Images/Instruction Images/instruction_{target}.png")
