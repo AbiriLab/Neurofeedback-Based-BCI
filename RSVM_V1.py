@@ -9,12 +9,10 @@ from sklearn.svm import SVC
 import matplotlib.pyplot as plt
 from scipy.signal import hilbert
 from sklearn.utils import shuffle
-
 import scipy
 from scipy.signal import butter, filtfilt, hilbert
 from scipy.interpolate import interp1d
 from scipy.interpolate import CubicSpline
-
 from tensorflow.keras.models import Sequential
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsRegressor
@@ -27,19 +25,12 @@ from sklearn.metrics import accuracy_score, classification_report
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from tensorflow.keras.layers import Dense,  BatchNormalization, Dropout
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
-
 import mne
 from mne.preprocessing import ICA
-
-
-
-
-
 from sklearn import svm
 from joblib import dump
 from sklearn.metrics import accuracy_score, classification_report
 import pandas as pd
-
 from PIL import Image, ImageDraw, ImageFont
 
 #############################################################################
@@ -120,7 +111,6 @@ def reject_artifacts(df, channel):
     df[channel] = interpolated_values
     return df
 
-
 c=(50/1000)
 N180_window = (int(160*c),int(200*c))
 P300_window = (int(280*c),int(320*c)) 
@@ -130,46 +120,37 @@ P700_window = (int(680*c),int(720*c))
 P900_window = (int(880*c),int(920*c))
 
 def extract_ERP_features(epoch):
-    
     N180_region= epoch[N180_window[0]:N180_window[1]]
     P300_region = epoch[P300_window[0]:P300_window[1]]
     N500_region = epoch[N500_window[0]:N500_window[1]]
     N600_region = epoch[N600_window[0]:N600_window[1]]
     P700_region = epoch[P700_window[0]:P700_window[1]]
     P900_region = epoch[P900_window[0]:P900_window[1]]
-
     N180_amplitude= np.min(N180_region)
     N180_mean_amplitude = np.mean(N180_region)
     N180_latency = np.argmax(N180_region) + N180_window[0]
-    
     P300_amplitude = np.max(P300_region)
     P300_mean_amplitude = np.mean(P300_region)
     P300_latency = np.argmax(P300_region) + P300_window[0]
-    
     N500_amplitude = np.min(N500_region)
     N500_mean_amplitude = np.mean(N500_region)
     N500_latency = np.argmin(N500_region) + N500_window[0]
-    
     N600_amplitude = np.min(N600_region)
     N600_mean_amplitude = np.mean(N600_region)
     N600_latency = np.argmin(N600_region) + N600_window[0]
-
     P700_amplitude = np.max(P700_region)
     P700_mean_amplitude = np.mean(P700_region)
     P700_latency = np.argmax(P700_region) + P700_window[0]
-    
     P900_amplitude = np.max(P900_region)
     P900_mean_amplitude = np.mean(P900_region)
     P900_latency = np.argmin(P900_region) + P900_window[0]
-
     return [
         N180_mean_amplitude, 
         P300_mean_amplitude, 
         N500_mean_amplitude, 
         N600_mean_amplitude, 
         P700_mean_amplitude, 
-        P900_mean_amplitude, 
-    ]
+        P900_mean_amplitude,]
 
 frequency_bands = {
     'delta': (0.5, 4),
@@ -178,7 +159,6 @@ frequency_bands = {
     'beta': (14, 30),
     'gamma': (30, 40),
     'ERP':(0.4,40) }
-
 
 # 'ERP':(0.4,40)
 def apply_bandpass_filter(signal, lowcut, highcut, fs, order=5):
@@ -211,12 +191,10 @@ def calculate_hilbert_features(signal, fs):
     amplitude_envelope = np.abs(analytic_signal)
     return amplitude_envelope
 
-
 ###########################################################
 # root_folder = "2-Patient Data"
 sub_folders = ["Pre Evaluation", "Neurofeedback", "Post Evaluation"]
 phase = int(input("Enter the phase (0, 1, 2): "))  # Or however you get the phase value
-
 # Determine which sub-folders to use based on the phase
 folders_to_use = []
 if phase == 0:
@@ -226,9 +204,7 @@ elif phase == 1:
 elif phase == 2:
     folders_to_use = [sub_folders[2]]  # 
 print('folders_to_use:', folders_to_use)
-
 # Iterate over each folder to read the csv files
-
 selected_columns = ['Fz', 'FC1', 'FC2', 'C3', 'Cz', 'C4', 'CPz', 'Pz']
 
 duration = 40 
@@ -290,9 +266,13 @@ for i in range(len(pp_sig_event)):
     if 'M' in pp_sig_event[i, 8] or 'F' in pp_sig_event[i, 8]:
         face.append(pp_sig_event[i])
         labels.append(0)
-    else:
+    elif 'I' in pp_sig_event[i, 8] or 'O' in pp_sig_event[i, 8] or 'S' in pp_sig_event[i, 8]:
         scene.append(pp_sig_event[i]) 
-        labels.append(1)        
+        labels.append(1)
+    else:
+        labels.append(2) #related to the wrong prediction
+        
+                
 face = np.array(face)
 scene = np.array(scene)
 labels=np.array(labels)                  
@@ -333,7 +313,6 @@ for i in range(S_np.shape[0]):
     else:
         result_list.append(1)
 # print(result_list)
-
 mean_value = sum(result_list) / len(result_list)
 print("Mean of result list:", mean_value)
 percentage_of_ones = mean_value * 100
@@ -344,20 +323,13 @@ img=Image.new('RGB', (1000,1000), color=(73,109,137))
 d=ImageDraw.Draw(img)
 font_0=ImageFont.truetype("arial.ttf", 500)
 font_1=ImageFont.truetype("arial.ttf", 150)
-
 d.text((150,50), "Your Score", font=font_1, fill=(255,255,0))
 d.text((250,250), n, font=font_0, fill=(255,255,0))
 img_file_name = f"Score.png"
 img_file_path = os.path.join(full_folder_path_, img_file_name) 
-
-
-# img.save('report_file_name.png')
 img.save(img_file_path, index=False)
 
-
-
-
-################################################################################################################################
+###############################################################################################################################
 # F_N=int(B_N/2)
 # S_N=int(B_N/2)
 # face_eeg_dada=face.reshape(F_N,int(df_temp.shape[0]/fs),50,5,9)
@@ -388,8 +360,17 @@ img.save(img_file_path, index=False)
 # plt.tight_layout()
 # plt.show()  
 ##################################################################################################################################################
-X=denoised.reshape(int(denoised.shape[0]/fs), fs*8)
-label=labels.reshape(int(labels.shape[0]/fs), fs)
+print('denoised', type(denoised), denoised.shape, 'labels', type(labels), labels.shape)
+
+ll=labels.reshape(B_N*(df_temp.shape[0]), 1)
+denoised_label= np.concatenate((denoised, ll), axis=1)
+print('denoised_label', denoised_label.shape)
+filtered_denoised_label = denoised_label[denoised_label[:, -1] != 2]
+new_denoised = filtered_denoised_label[:, :8]
+labels_only = filtered_denoised_label[:, -1]
+
+X=new_denoised .reshape(int(new_denoised.shape[0]/fs), fs*8)
+label=labels_only.reshape(int(labels_only.shape[0]/fs), fs)
 Y=np.squeeze(label[:,0])
 data = X
 
@@ -418,14 +399,14 @@ Hil_FE_np=np.array(Hil_FE)
 print(BP_Power_FE_np.shape) 
 print(Hil_FE_np.shape)
 
-data_reshaped = X.reshape(int(denoised.shape[0]/fs), 8, 250)
-ERP_FE = np.array([[extract_ERP_features(data_reshaped[i, j, :]) for j in range(8)] for i in range(int(denoised.shape[0]/fs))])
+data_reshaped = X.reshape(int(new_denoised.shape[0]/fs), 8, 250)
+ERP_FE = np.array([[extract_ERP_features(data_reshaped[i, j, :]) for j in range(8)] for i in range(int(new_denoised.shape[0]/fs))])
 print(ERP_FE.shape)
 
 combined_features = np.concatenate([Hil_FE_np, BP_Power_FE, ERP_FE], axis=2)
 print(combined_features.shape)  # Should print (1600, 8, 11)
 ##################################################
-af=combined_features.reshape(int(denoised.shape[0]/fs), 8*combined_features.shape[2])
+af=combined_features.reshape(int(new_denoised.shape[0]/fs), 8*combined_features.shape[2])
 af, Y = shuffle(af, Y)
 print(af.shape, Y.shape)
 

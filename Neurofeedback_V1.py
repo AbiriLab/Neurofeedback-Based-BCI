@@ -534,11 +534,10 @@ class RootWindow:
             
             final_lable_array=[]
             raw=[]
-            # event=[]
             PP=[]
             for j in range (0,8):
                 image_window.start_new_trial()
-                selected_columns = ['Fz', 'FC1', 'FC2', 'C3', 'Cz', 'C4', 'CPz', 'Pz']
+                selected_columns = ['Fz', 'FC1', 'FC2', 'C3', 'Cz', 'C4', 'CPz','Pz']
                 tdata=[]
                 lable=[]
                 for n in range(0,5): #looking at each image for 5 seconds
@@ -630,15 +629,23 @@ class RootWindow:
                     correct_prediction = (instruction == 'Face' and predictions[0] == 0) or (instruction == 'Scene' and predictions[0] == 1)
 
                     label_array = np.zeros((250, 4), dtype=object) 
-                    label_array[:, 0] = 'F' if instruction == 'Face' else 'S'
+                    label_array[:, 2] = 'F' if instruction == 'Face' else 'S'
+                    
+                    # for row in range(label_array.shape[0]):
+                    #     if (instruction == 'Face' and correct_prediction) or (instruction == 'Scene' and not correct_prediction):
+                    #         label_array[row, 1] = 'F'
+                    #     elif (instruction == 'Scene' and correct_prediction) or (instruction == 'Face' and not correct_prediction):
+                    #         label_array[row, 1] = 'S'
                     
                     for row in range(label_array.shape[0]):
-                        if (instruction == 'Face' and correct_prediction) or (instruction == 'Scene' and not correct_prediction):
-                            label_array[row, 1] = 'F'
-                        elif (instruction == 'Scene' and correct_prediction) or (instruction == 'Face' and not correct_prediction):
-                            label_array[row, 1] = 'S'
+                        if (instruction == 'Face' and correct_prediction):
+                            label_array[row, 0] = 'F'
+                        if (instruction == 'Scene' and correct_prediction):
+                            label_array[row, 0] = 'S'
+                        elif (instruction == 'Face' and not correct_prediction) or (instruction == 'Face' and not correct_prediction):
+                            label_array[row, 0] = 'N'
                     
-                    label_array[:, 2] =label_array[:, 1]         
+                    label_array[:, 1] =label_array[:, 0]         
                     label_array[:, 3] = 1 if correct_prediction else 0
                     print('label_array',label_array.shape)
         
