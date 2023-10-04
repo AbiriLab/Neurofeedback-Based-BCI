@@ -7,7 +7,6 @@ from image_display_unicorn import *
 from image_display_unicorn_NF import *
 import UnicornPy
 import random
-device = UnicornPy.Unicorn("UN-2021.05.36")
 from scipy.signal import butter, filtfilt     
 ####################################################
 import os
@@ -76,16 +75,17 @@ from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
 import mne
 from mne.preprocessing import ICA
 
+device = UnicornPy.Unicorn("UN-2021.05.36")
+
+
 # KeyPressDetector class
 class KeyPressDetector:
     def __init__(self, master):
         self.key_pressed = 0  # Initial state
         master.bind('<Key>', self.on_key_press)
-
     def on_key_press(self, event=None):
         print("Key pressed detected!")
         self.key_pressed = 1
-
     def check_key_press(self):
         result = self.key_pressed
         self.key_pressed = 0  # Reset after checking
@@ -107,7 +107,7 @@ class RootWindow:
         self.image_window = None
         self.block = 0
         self.image_window_open = False
-        self.patient_progress = ['', '0', '0', '0', '00000000']
+        self.patient_progress = ['', '0', '0', '0', '00000000','00000000','00000000','00000000']
         self.patient_index = 0
         self.patient_data_list = []
         self.pre_eval = 0
@@ -252,40 +252,101 @@ class RootWindow:
             return
         pil_image = Image.open(image_path)
         pil_image.show()
-    
            
+    # def create_trial(self):
+    #     print('self.patient_progress', len(self.patient_progress))
+    #     patient_name = self.patient_name_entry.get()
+    #     self.patient_progress[0] = patient_name
+    #     random.shuffle(self.r)
+    #     randomized_blocks = self.r
+    #     self.seq = " ".join(str(x) for x in randomized_blocks)
+    #     print('self.seq', self.seq) 
+    #     print('randomized_blocks', randomized_blocks)
+    #     # for data_list in self.patient_data_list:
+    #     #    if patient_name == data_list[0]:
+    #     # self.patient_index = self.patient_data_list.index(data_list)
+    #     # self.patient_progress = data_list
+    #     self.pre_eval = int(self.patient_progress[1])
+    #     self.neuro = int(self.patient_progress[2])
+    #     self.post_eval = int(self.patient_progress[3])
+    #     # self.seq = self.patient_progress[4]
+    #     if self.curr_phase.get() == 'Pre-Evaluation':
+    #         self.block = self.pre_eval
+    #     elif self.curr_phase.get() == "Neurofeedback":
+    #         self.block = self.neuro
+    #     elif self.curr_phase.get() == "Post-Evaluation":
+    #         self.block = self.post_eval
+    #     self.curr_block.set(str(self.block))
+    #     print('self.curr_block', self.curr_block)
+    #     self.progress.set(round(self.block * 12.5))
+    #     # self.open_image_win()
+    #     self.start_trial_but.config(state="normal")
+    #     # return
+    #     # self.pre_eval, self.neuro, self.post_eval = 0, 0, 0
+    #     if self.curr_phase.get() == 'Pre-Evaluation':
+    #         self.patient_progress[5] = self.seq
+    #     elif self.curr_phase.get() == "Neurofeedback":
+    #         self.patient_progress[6] = self.seq
+    #     elif self.curr_phase.get() == "Post-Evaluation":
+    #         self.patient_progress[7] = self.seq
+           
+    #     self.patient_progress[4] = self.seq
+    #     self.patient_data_list.append(self.patient_progress)
+    #     self.patient_index = len(self.patient_data_list) - 1
+    #     self.add_patient_data()
+    #     self.open_image_win()
+    #     # self.update_gui()
+    
+
     def create_trial(self):
+        print('self.patient_progress', len(self.patient_progress))
         patient_name = self.patient_name_entry.get()
         self.patient_progress[0] = patient_name
         random.shuffle(self.r)
         randomized_blocks = self.r
-        for data_list in self.patient_data_list:
-            if patient_name == data_list[0]:
-                self.patient_index = self.patient_data_list.index(data_list)
-                self.patient_progress = data_list
-                self.pre_eval = int(self.patient_progress[1])
-                self.neuro = int(self.patient_progress[2])
-                self.post_eval = int(self.patient_progress[3])
-                self.seq = self.patient_progress[4]
-                if self.curr_phase.get() == 'Pre-Evaluation':
-                    self.block = self.pre_eval
-                elif self.curr_phase.get() == "Neurofeedback":
-                    self.block = self.neuro
-                elif self.curr_phase.get() == "Post-Evaluation":
-                    self.block = self.post_eval
-                self.curr_block.set(str(self.block))
-                self.progress.set(round(self.block * 12.5))
-                self.open_image_win()
-                self.start_trial_but.config(state="normal")
-                return
-        self.pre_eval, self.neuro, self.post_eval = 0, 0, 0
         self.seq = " ".join(str(x) for x in randomized_blocks)
+        print('self.seq', self.seq) 
+        print('randomized_blocks', randomized_blocks)
+        
+        self.pre_eval = int(self.patient_progress[1])
+        self.neuro = int(self.patient_progress[2])
+        self.post_eval = int(self.patient_progress[3])
+
+        if self.curr_phase.get() == 'Pre-Evaluation':
+            self.block = self.pre_eval
+        elif self.curr_phase.get() == "Neurofeedback":
+            self.block = self.neuro
+        elif self.curr_phase.get() == "Post-Evaluation":
+            self.block = self.post_eval
+        self.curr_block.set(str(self.block))
+        print('self.curr_block', self.curr_block)
+        self.progress.set(round(self.block * 12.5))
+
+        if self.curr_phase.get() == 'Pre-Evaluation':
+            self.patient_progress[5] = self.seq
+        elif self.curr_phase.get() == "Neurofeedback":
+            self.patient_progress[6] = self.seq
+        elif self.curr_phase.get() == "Post-Evaluation":
+            self.patient_progress[7] = self.seq
+
         self.patient_progress[4] = self.seq
-        self.patient_data_list.append(self.patient_progress)
-        self.patient_index = len(self.patient_data_list) - 1
+
+        # Check if patient exists in the list and update, else append new data
+        patient_found = False
+        for index, data_list in enumerate(self.patient_data_list):
+            if patient_name == data_list[0]:
+                self.patient_data_list[index] = self.patient_progress
+                patient_found = True
+                break
+
+        if not patient_found:
+            self.patient_data_list.append(self.patient_progress)
+            self.patient_index = len(self.patient_data_list) - 1
+
         self.add_patient_data()
         self.open_image_win()
-        # self.update_gui()
+   
+    
     
     def add_patient_data(self):
         with open('pat_progess_v2.csv', 'w', newline='') as csvfile:
@@ -293,26 +354,24 @@ class RootWindow:
             for row in self.patient_data_list:
                 writer.writerow(row)
 
-    def get_second_monitor_geometry():
-        monitors = get_monitors()
-        if len(monitors) < 2:
-            print('Just one monitor has been detected')
-            return None
-        second_monitor = monitors[1]  # assuming the second monitor is the second in the list
-        width = second_monitor.width
-        height = second_monitor.height
-        x = second_monitor.x
-        y = second_monitor.y
-        print('The second monitor has been detected')
-        # return the center position for an 800x600 window
-        return "%dx%d+%d+%d" % (1600, 1200, x + (width - 1600) // 2, y + (height - 1200) // 2)
+    # def get_second_monitor_geometry():
+    #     monitors = get_monitors()
+    #     if len(monitors) < 2:
+    #         print('Just one monitor has been detected')
+    #         return None
+    #     second_monitor = monitors[1]  # assuming the second monitor is the second in the list
+    #     width = second_monitor.width
+    #     height = second_monitor.height
+    #     x = second_monitor.x
+    #     y = second_monitor.y
+    #     print('The second monitor has been detected')
+    #     # return the center position for an 800x600 window
+    #     return "%dx%d+%d+%d" % (1600, 1200, x + (width - 1600) // 2, y + (height - 1200) // 2)
 
     def open_image_win(self):
         global image_window, top
         top = Toplevel()
-
         monitors = get_monitors()
-
         if len(monitors) >= 2:
             print('Two monitors have been detected')
             monitor = monitors[1]  # This is the second monitor
@@ -326,7 +385,6 @@ class RootWindow:
         else:
             # Fallback for single monitor setups
             top.geometry("%dx%d+%d+%d" % (1600, 1200, 300, 200))
-
         top.title("Image Slideshow")
 
         if self.curr_phase.get() == "Neurofeedback":  
@@ -342,7 +400,6 @@ class RootWindow:
             image_window.create_img_arr()
             image_window.pleaseWait_image()
             self.image_window_open = True
-
         top.update()
     ################################################################################################################################    
     ################################################################################################################################
@@ -363,7 +420,6 @@ class RootWindow:
             initial_state = zi * data[0]
         y, final_state = lfilter(b, a, data, zi=initial_state)
         return y, final_state
-
 
     def denoise_data(self, df, col_names, n_clusters):
         df_denoised = df.copy()
@@ -510,8 +566,11 @@ class RootWindow:
         
         if self.curr_phase.get() == "Neurofeedback":  
             seq_list = [int(x) for x in self.seq if x.isdigit()]
-            print('Block',self.block)
+            print('seq_list', seq_list)
+            print('Trial',self.block)
+            self.patient_progress[2]=self.block+1
             print('randomized_blocks:',seq_list[self.block])
+
             image_window.instructions_image_nf()
             top.update()
             time.sleep(5)
@@ -527,10 +586,9 @@ class RootWindow:
             buffer = np.zeros((buffer_size_samples, 8))  # 8 is the number of EEG channels
             face_alpha_values = [0,70,128,204,255] 
             face_alpha_index=2
-            
             current_directory = os.getcwd()
             
-            print(f"Current directory: {current_directory}")
+            # print(f"Current directory: {current_directory}")
             
             final_lable_array=[]
             raw=[]
@@ -594,13 +652,12 @@ class RootWindow:
                     eeg_df_denoised = self.preprocess(DN, col_names=selected_columns, n_clusters=[50]*len(selected_columns))
                     # print('eeg_df_denoised', type(eeg_df_denoised), eeg_df_denoised, eeg_df_denoised.shape )
                             
-
                     chunks = np.array_split(eeg_df_denoised.to_numpy(), 5, axis=0)
                     # print('chunks', chunks)
                     
-                    print('chunks[4]',chunks[4].shape)
+                    # print('chunks[4]',chunks[4].shape)
                     eeg_signal = chunks[4].reshape(8, 250)  # reshaped to (8, 250)
-                    print('eeg_signal', eeg_signal.shape)
+                    # print('eeg_signal', eeg_signal.shape)
                     Hil_feature_for_sample = []
                     Power_feature_for_sample = []
                     for channel in range(8):
@@ -618,7 +675,7 @@ class RootWindow:
                         Power_feature_for_sample.append(power_for_channel)
                     BP_Power_FE_np = np.array(Power_feature_for_sample)     
                     Hil_FE_np=np.array(Hil_feature_for_sample)
-                    print('Hil_FE_np', Hil_FE_np.shape)
+                    # print('Hil_FE_np', Hil_FE_np.shape)
                     
                     ERP_FE = np.array([self.extract_ERP_features(eeg_signal[j, :]) for j in range(8)])
                     print(ERP_FE.shape)
@@ -642,12 +699,12 @@ class RootWindow:
                             label_array[row, 0] = 'F'
                         if (instruction == 'Scene' and correct_prediction):
                             label_array[row, 0] = 'S'
-                        elif (instruction == 'Face' and not correct_prediction) or (instruction == 'Face' and not correct_prediction):
+                        elif (instruction == 'Face' and not correct_prediction) or (instruction == 'Scene' and not correct_prediction):
                             label_array[row, 0] = 'N'
                     
                     label_array[:, 1] =label_array[:, 0]         
                     label_array[:, 3] = 1 if correct_prediction else 0
-                    print('label_array',label_array.shape)
+                    # print('label_array',label_array.shape)
         
                     # Adjust alpha
                     if instruction == 'Face':
@@ -671,12 +728,13 @@ class RootWindow:
                     lable.append(label_array)
                     nplable=np.array(lable).reshape(-1, 4)
                     fal = np.concatenate((new_totdata_array, nplable), axis=1)
-                    print('nplable', nplable.shape)
+                    # print('nplable', nplable.shape)
                 del tdata
+                
                 final_lable_array.append(fal)
                 fl=np.array(final_lable_array).reshape(-1, 21)
-                print('fl', fl.shape)
-            
+                # print('fl', fl.shape)
+            del seq_list 
             csv_filename = f'fl_{image_window.curr_block}.csv'
             csv_filepath = os.path.join(neuro_folder, csv_filename)
             
@@ -684,12 +742,17 @@ class RootWindow:
             with open(csv_filepath, 'w', newline='') as csvfile:
                 writer = csv.writer(csvfile)
                 for row in fl:
-                    writer.writerow(row)            
-                
+                    writer.writerow(row)                    
         else: 
             seq_list = [int(x) for x in self.seq if x.isdigit()]
-            print(seq_list)
+            print('self.seq', self.seq)
+            print('seq_list', seq_list)
             print('Trial',self.block)
+            if self.curr_phase.get() == 'Pre-Evaluation':
+                self.patient_progress[1]=self.block+1
+            else:
+                self.patient_progress[3]=self.block+1
+                
             print('randomized_blocks:',seq_list[self.block])
             image_window.instructions_image()
             top.update()
@@ -730,7 +793,8 @@ class RootWindow:
                         for row in tdataarray:
                             writer.writerow(row)
                     
-            print(j)   
+            print(j) 
+            del seq_list  
             del tdata
             del tdataarray
         image_window.pleaseWait_image()   
@@ -743,7 +807,6 @@ class RootWindow:
     ################################################################################################################################  
     
     def Create_SVMScript(self):
-
         try:
             subprocess.run(["python", "RSVM_V1.py"], check=True)
         except subprocess.CalledProcessError as e:
@@ -751,7 +814,6 @@ class RootWindow:
         except FileNotFoundError:
             print("The RSVM_V1.py script was not found.")
 
-    
     def run_RSVMScript(self):
         try:
             subprocess.run(["python", "RSVM_V1.py"], check=True)
@@ -760,9 +822,9 @@ class RootWindow:
         except FileNotFoundError:
             print("The RSVM_V1.py script was not found.")
             
-
     def end_trial(self):
         global image_window
+        del self.seq
         self.add_patient_data()
         image_window.close_window()
         device.StopAcquisition()
@@ -775,44 +837,58 @@ class RootWindow:
 
     def start_block(self):
         global image_window
-        self.master.focus_set()
-        block_to_run = self.single_block_num_var.get()
-        if self.image_window_open:
-            image_window.close_window()
-            
-        self.top = Toplevel()    
-        monitors = get_monitors()
-
-        # Check if there are at least two monitors
-        if len(monitors) >= 2:
-            monitor = monitors[1]  # This is the second monitor
-            # Set the window to be in the middle of the second monitor
-            x = monitor.x + (monitor.width - 800) // 2
-            y = monitor.y + (monitor.height - 600) // 2
-            top.geometry("%dx%d+%d+%d" % (800, 600, x, y))
-        else:
-            # Fallback for single monitor setups
-            top.geometry("%dx%d+%d+%d" % (800, 600, 500, 200))
-
-        top.title("Image Slideshow")
-
-        
-        # self.top.geometry("%dx%d+%d+%d" % (800, 600, 950, 200))
-        self.top.title("Image Slideshow")
-        self.image_window = DisplayImage(self.top, self.block, block_to_run)
-        self.image_window.single_block = True
-        self.image_window.create_img_arr()
-        self.image_window.pause = False
-        
-        
         patient_name = self.patient_name_data.get() # Get patient name and create the patient folder
         patient_folder= os.path.join("2-Patient Data", patient_name)
         pre_folder= os.path.join(patient_folder, "Pre Evaluation")
         post_folder= os.path.join(patient_folder, "Post Evaluation")
-        print('Block', block_to_run)
+        
+        self.master.focus_set()
+        block_to_run = self.single_block_num_var.get()
+        if self.image_window_open:
+            self.image_window.close_window()
+        print('Block', block_to_run)    
+        self.top = Toplevel()    
+        monitors = get_monitors()
+        
+        if len(monitors) >= 2:
+            print('Two monitors have been detected')
+            monitor = monitors[1]  # This is the second monitor
+            # Set the window to be in the middle of the second monitor
+            # Double the window dimensions
+            window_width = monitor.width
+            window_height = monitor.height
+            x = monitor.x #- (monitor.x) // 2
+            y = monitor.y #+ (monitor.height - window_height) // 2
+            self.top.geometry("%dx%d+%d+%d" % (window_width, window_height, x, y)) #(window_width, window_height, x, y)
+        else:
+            # Fallback for single monitor setups
+            self.top.geometry("%dx%d+%d+%d" % (1600, 1200, 300, 200))
+        self.top.title("Image Slideshow")
+        
+        # # Check if there are at least two monitors
+        # if len(monitors) >= 2:
+        #     monitor = monitors[1]  # This is the second monitor
+        #     # Set the window to be in the middle of the second monitor
+        #     x = monitor.x + (monitor.width - 800) // 2
+        #     y = monitor.y + (monitor.height - 600) // 2
+        #     self.top.geometry("%dx%d+%d+%d" % (800, 600, x, y))
+        # else:
+        #     # Fallback for single monitor setups
+        #     self.top.geometry("%dx%d+%d+%d" % (800, 600, 500, 200))
+
+        # self.top.title("Image Slideshow")
+        # self.top.geometry("%dx%d+%d+%d" % (800, 600, 950, 200))
+        # self.top.title("Image Slideshow")
+            
+        self.image_window = DisplayImage(self.top, self.block, block_to_run)
+        self.image_window.single_block = True
+        self.image_window.create_img_arr()
+        self.image_window.pleaseWait_image()
+        self.image_window_open = True
+        # self.image_window.pause = False
         
         self.image_window.instructions_image() 
-        top.update()
+        self.top.update()
         self.image_window_open = True
         print("Image Window Opened") 
         device.StartAcquisition(False)
@@ -824,8 +900,7 @@ class RootWindow:
             device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
             instruction_samples_collected += self.FrameLength
         excel_file_lable = pd.read_csv(f'Block{block_to_run}_key.csv')
-        
-        
+            
         tdataarray=[]
         tdata=[]
         root.update()
@@ -841,7 +916,6 @@ class RootWindow:
                 combined_data = np.concatenate((combined_data,[key_pressed]))
                 tdata.append(combined_data)
                 tdataarray = np.array(tdata)    
-
             csv_filename = f'single_block_{block_to_run}.csv'
             if self.curr_phase.get() == "Pre-Evaluation":  
                 csv_filepath = os.path.join(pre_folder, csv_filename)
@@ -861,9 +935,12 @@ class RootWindow:
         self.curr_block.set(str(self.block))
         device.StopAcquisition() 
         
-
     def end_block(self):
+        global image_window
+        self.add_patient_data()
         self.image_window.close_window()
+        device.StopAcquisition()
+        print('Disconnected')
     
     def update_patient_data(self):
         self.add_patient_data()
@@ -874,3 +951,9 @@ if __name__ == "__main__":
     root.title("Root Window Controls")
     main_window = RootWindow(root)
     root.mainloop()
+    
+
+
+
+ 
+

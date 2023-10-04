@@ -29,6 +29,11 @@ python-dateutil 2.8.2
 pywin32         305
 setuptools      56.0.0
 six             1.16.0
-
-
 \Maryam
+
+__________________________________
+INSTRUCTION
+1- final dveloped svm for unicorn data: C:\Users\tnlab\OneDrive\Documents\GitHub\AlphaFold\Neurofeedback-Based-BCI\SVM for Unicorn Data\Classificaton_nf_V8.ipynb
+2- The 'RSVM_V1.py' has been used for classification and recalibration.
+3-For displaying the images: 'image_display_unicorn' is for pre-evaluation and post-evaluation phase and 'image_display_unicorn_NF' is for neurofeedback phase.
+4-patient's name is recorded in 'pat_progess_v2.csv'

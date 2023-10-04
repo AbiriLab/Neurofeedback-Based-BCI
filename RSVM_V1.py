@@ -42,8 +42,6 @@ print(f"Patient data folder: {patient_data_folder}")
 
 folder_name = input("Please enter the subject name: ")
 Report_Number = input("Please enter the reprt number: ")
-# Phase = input("Please enter the phase:")
-
 full_folder_path = os.path.join(patient_data_folder, folder_name)
 
 ##########################################################
