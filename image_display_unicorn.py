@@ -11,7 +11,6 @@ import threading
 class DisplayImage:
 
     def __init__(self, master, block, block_order):
-        
         self.block_order = block_order
         self.master = master
         self.image_arr = []

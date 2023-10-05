@@ -586,6 +586,7 @@ class RootWindow:
             buffer = np.zeros((buffer_size_samples, 8))  # 8 is the number of EEG channels
             face_alpha_values = [0,70,128,204,255] 
             face_alpha_index=2
+            
             current_directory = os.getcwd()
             
             # print(f"Current directory: {current_directory}")
@@ -805,7 +806,6 @@ class RootWindow:
     ################################################################################################################################    
     ################################################################################################################################
     ################################################################################################################################  
-    
     def Create_SVMScript(self):
         try:
             subprocess.run(["python", "RSVM_V1.py"], check=True)
@@ -841,11 +841,10 @@ class RootWindow:
         patient_folder= os.path.join("2-Patient Data", patient_name)
         pre_folder= os.path.join(patient_folder, "Pre Evaluation")
         post_folder= os.path.join(patient_folder, "Post Evaluation")
-        
         self.master.focus_set()
         block_to_run = self.single_block_num_var.get()
-        if self.image_window_open:
-            self.image_window.close_window()
+        # if self.image_window_open:
+        #     self.image_window.close_window()
         print('Block', block_to_run)    
         self.top = Toplevel()    
         monitors = get_monitors()

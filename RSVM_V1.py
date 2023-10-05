@@ -364,13 +364,17 @@ ll=labels.reshape(B_N*(df_temp.shape[0]), 1)
 denoised_label= np.concatenate((denoised, ll), axis=1)
 print('denoised_label', denoised_label.shape)
 filtered_denoised_label = denoised_label[denoised_label[:, -1] != 2]
+
 new_denoised = filtered_denoised_label[:, :8]
+print('filtered_denoised_label', filtered_denoised_label.shape, 'new_denoised', new_denoised.shape, 'denoised_label', denoised_label.shape)
 labels_only = filtered_denoised_label[:, -1]
+print('labels_only', labels_only.shape,  'filtered_denoised_label', filtered_denoised_label.shape, 'new_denoised', new_denoised.shape, 'denoised_label', denoised_label.shape)
 
 X=new_denoised .reshape(int(new_denoised.shape[0]/fs), fs*8)
 label=labels_only.reshape(int(labels_only.shape[0]/fs), fs)
 Y=np.squeeze(label[:,0])
 data = X
+print('Y', Y.shape, 'X', X.shape)
 
 BP_Power_FE = []
 Hil_FE=[]
@@ -413,6 +417,7 @@ oversampler = RandomOverSampler(sampling_strategy='auto', random_state=42)
 X_resampled, y_resampled = oversampler.fit_resample(af, Y)
 X_resampled= X_resampled.astype(np.float32)
 y_resampled = y_resampled.astype(np.int32)
+print('X_resampled', X_resampled.shape,'y_resampled', y_resampled.shape )
 
 # Split X and y into training and testing sets
 X_touched, X_untouch, y_touch, y_untouch = train_test_split(X_resampled, y_resampled, test_size=0.1, random_state=42)
@@ -438,7 +443,6 @@ print(y_train.shape, y_test.shape)
 print('X_train:', X_train.shape, 'y_train:', y_train.shape, 'X_test:', X_test.shape, 'y_test:',
       y_test.shape, 'X_untouch:', X_untouch.shape, 'y_untouch:', y_untouch.shape )
 ################
-
 # Create a linear SVM classifier
 clf = svm.SVC(kernel='linear')
 clf.fit(X_train, y_train)
@@ -456,8 +460,6 @@ report_df_svm.loc['accuracy', :] = [accuracy, None, None, None]
 report_file_name = f"Report_{Report_Number}.xlsx"  # This becomes "Report_001.xlsx"
 full_file_path = os.path.join(full_folder_path_, report_file_name)  
 report_df_svm.to_excel(full_file_path, index=False)
-
-
 
 # # Create a linear SVM classifier
 # clf = svm.SVC(kernel='linear')

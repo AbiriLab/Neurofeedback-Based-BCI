@@ -67,17 +67,13 @@ class DisplayImagenf:
             # Randomly select a face image
             face_img_path = random.choice(self.ffaces)
             self.face_img = Image.open(face_img_path).convert("L")
-
             # Randomly select a scene image
             scene_img_path = random.choice(self.sscenes)
             self.scene_img = Image.open(scene_img_path).convert("L")
-
         # Create masks with different transparencies
         face_mask = Image.new("L", self.face_img.size, int(face_alpha))
-    
         # Composite greyscale images using masks
-        composite_img = Image.composite(self.face_img, self.scene_img, face_mask)
-        
+        composite_img = Image.composite(self.face_img, self.scene_img, face_mask)        
         return composite_img 
 
     def update_transparency(self, face_alpha):
@@ -87,9 +83,7 @@ class DisplayImagenf:
         self.image_arr[-1] = composite_img
         # Update the image on the display
         self.next_image(composite_img)
-
-
-        
+    
     def next_image(self, img=None, face_alpha=.5):
         next_img = img if img is not None else self.create_composite_img(face_alpha)
         # Resize and convert to PhotoImage

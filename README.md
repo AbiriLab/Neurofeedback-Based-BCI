@@ -35,5 +35,11 @@ __________________________________
 INSTRUCTION
 1- final dveloped svm for unicorn data: C:\Users\tnlab\OneDrive\Documents\GitHub\AlphaFold\Neurofeedback-Based-BCI\SVM for Unicorn Data\Classificaton_nf_V8.ipynb
 2- The 'RSVM_V1.py' has been used for classification and recalibration.
-3-For displaying the images: 'image_display_unicorn' is for pre-evaluation and post-evaluation phase and 'image_display_unicorn_NF' is for neurofeedback phase.
-4-patient's name is recorded in 'pat_progess_v2.csv'
+3- For displaying the images: 'image_display_unicorn' is for pre-evaluation and post-evaluation phase and 'image_display_unicorn_NF' is for neurofeedback phase.
+4- patient's name, progress, and trial order are recorded in 'pat_progess_v2.csv'
+5- image_display_unicorn.py is for displaying image in offline mode, it should be in the same path of the Neurofeedback_V1
+6- image_display_unicorn_NF.py is for displaying image in online mode, it should be in the same path of the Neurofeedback_V1
+7- The directory of the composite images for offline mode: C:\Users\tnlab\OneDrive\Documents\GitHub\AlphaFold\Neurofeedback-Based-BCI\Images\Composite_Images
+8- The directory of the composite images for online mode: C:\Users\tnlab\OneDrive\Documents\GitHub\AlphaFold\Neurofeedback-Based-BCI\Images\1-Neurofeedback
+
+
