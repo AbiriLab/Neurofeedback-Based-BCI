@@ -420,13 +420,13 @@ y_resampled = y_resampled.astype(np.int32)
 print('X_resampled', X_resampled.shape,'y_resampled', y_resampled.shape )
 
 # Split X and y into training and testing sets
-X_touched, X_untouch, y_touch, y_untouch = train_test_split(X_resampled, y_resampled, test_size=0.1, random_state=42)
-X_train, X_test, y_train, y_test = train_test_split(X_touched, y_touch, test_size=0.1, random_state=42)
+# X_touched, X_untouch, y_touch, y_untouch = train_test_split(X_resampled, y_resampled, test_size=0.1, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.1, random_state=42)
 
 # Convert y_train and y_test to categorical format for Keras
 y_train = tf.keras.utils.to_categorical(y_train, num_classes=2)
 y_test = tf.keras.utils.to_categorical(y_test, num_classes=2)
-y_untouch=tf.keras.utils.to_categorical(y_untouch, num_classes=2)
+# y_untouch=tf.keras.utils.to_categorical(y_untouch, num_classes=2)
 
 
 # Convert the data to a numerical type (float)
@@ -436,12 +436,12 @@ print(X_train.shape)
 # Convert one-hot-encoded labels to integer-encoded labels
 y_train = np.argmax(y_train, axis=-1)
 y_test = np.argmax(y_test, axis=-1)
-y_untouch = np.argmax(y_untouch, axis=-1)
+# y_untouch = np.argmax(y_untouch, axis=-1)
 print(y_train.shape, y_test.shape)
 
 
 print('X_train:', X_train.shape, 'y_train:', y_train.shape, 'X_test:', X_test.shape, 'y_test:',
-      y_test.shape, 'X_untouch:', X_untouch.shape, 'y_untouch:', y_untouch.shape )
+      y_test.shape)
 ################
 # Create a linear SVM classifier
 clf = svm.SVC(kernel='linear')
