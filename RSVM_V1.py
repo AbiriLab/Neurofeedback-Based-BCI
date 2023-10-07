@@ -428,7 +428,6 @@ y_train = tf.keras.utils.to_categorical(y_train, num_classes=2)
 y_test = tf.keras.utils.to_categorical(y_test, num_classes=2)
 # y_untouch=tf.keras.utils.to_categorical(y_untouch, num_classes=2)
 
-
 # Convert the data to a numerical type (float)
 X_train = X_train.astype(np.float64)
 print(X_train.shape)
