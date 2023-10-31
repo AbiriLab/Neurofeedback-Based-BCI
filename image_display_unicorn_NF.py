@@ -3,12 +3,11 @@ import time
 import tkinter as tk
 from tkinter import *
 from PIL import ImageTk, Image
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageChops
 import random
 import threading
 import numpy as np
 from matplotlib import pyplot as plt
-
 
 class DisplayImagenf:
 
@@ -43,12 +42,49 @@ class DisplayImagenf:
         self.randomized_blocks = None
         self.instruction_image = False
         self.single_block = False
+        self.gray_image = False
+        self.base_image = False
         im = self.blank_img
         resized = im.resize((800, 600), Image.Resampling.LANCZOS)
         ph = ImageTk.PhotoImage(resized)
         self.label = Label(self.master, image=ph, width=800, height=600)
         self.label.image = ph  # need to keep the reference of your image to avoid garbage collection
         self.label.grid(row=1, column=0)
+
+
+
+    def create_gray_image(self, width, height, shade_of_gray=128):
+        return Image.new('L', (width, height), shade_of_gray)
+    
+
+    def display_gray_image(self):
+        gray_img = self.create_gray_image(800, 600)  # Size can be adjusted
+        self.next_image(gray_img)
+
+   
+    def create_black_image_with_cross(self, width, height, line_width=5, cross_size_ratio=0.06):
+        img = Image.new('RGB', (width, height), 'black')
+        draw = ImageDraw.Draw(img)
+
+        # Calculate start and end points for a smaller cross
+        cross_width = width * cross_size_ratio
+        cross_height = cross_width
+        left = (width - cross_width) // 2
+        top = (height - cross_height) // 2
+        right = left + cross_width
+        bottom = top + cross_height
+
+        # Draw the cross
+        draw.line((left, height // 2, right, height // 2), fill='white', width=line_width)
+        draw.line((width // 2, top, width // 2, bottom), fill='white', width=line_width)
+        return img
+
+
+
+    def display_black_image_with_cross(self):
+        black_img_with_cross = self.create_black_image_with_cross(800, 600)  # Size can be adjusted
+        self.next_image(black_img_with_cross)
+
 
     def create_instruct_order(self):
         if not self.single_block:
@@ -73,8 +109,13 @@ class DisplayImagenf:
         # Create masks with different transparencies
         face_mask = Image.new("L", self.face_img.size, int(face_alpha))
         # Composite greyscale images using masks
-        composite_img = Image.composite(self.face_img, self.scene_img, face_mask)        
-        return composite_img 
+        composite_img = Image.composite(self.face_img, self.scene_img, face_mask)   
+        # Overlay the white cross - ensure the image is in 'RGB' mode
+        composite_img_rgb = composite_img.convert('RGB')
+        cross_img = self.create_black_image_with_cross(*composite_img.size)
+        composite_img_with_cross = ImageChops.lighter(composite_img_rgb, cross_img)
+    
+        return composite_img_with_cross
 
     def update_transparency(self, face_alpha):
         # Create a new composite image with the updated transparency
@@ -96,7 +137,27 @@ class DisplayImagenf:
         self.COUNT = self.COUNT + 1
         # Update the master
         self.master.update()
-            
+
+    # def start_new_trial(self):
+    #     # If self.gray_image is True, create and show a gray image
+    #     if self.gray_image:
+    #         gray_img = Image.new('L', (800, 600), 'gray')  # Creating a simple gray image
+    #         self.next_image(gray_img)
+    #         return  # Return after displaying the gray image
+
+    #     # If self.base_image is True, create and show the base image (black with white cross)
+    #     if self.base_image:
+    #         base_img = self.create_black_image_with_cross(800, 600)
+    #         self.next_image(base_img)
+    #         return  # Return after displaying the base image
+
+    #     # Clear current face and scene images
+    #     self.face_img = None
+    #     self.scene_img = None
+
+    #     # Start a new trial with a composite image
+    #     self.next_image(self.create_composite_img(128))
+        
     def start_new_trial(self):
         # Clear current face and scene images
         self.face_img = None
