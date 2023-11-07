@@ -623,12 +623,13 @@ class RootWindow:
             else:
                 self.patient_progress[3]=self.block+1
                 
-            print('randomized_blocks:',seq_list[self.block])
+            print('randomized_blocks:', seq_list[self.block])
             image_window.instructions_image()
             top.update()
-            device.StartAcquisition(False)
+            if self.block == 0 or self.block == 4:
+                device.StartAcquisition(False)
             
-            instruction_duration_samples = 250 * 5
+            instruction_duration_samples = 250 *150
             instruction_samples_collected = 0
             while instruction_samples_collected < instruction_duration_samples:
                 device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
@@ -718,7 +719,8 @@ class RootWindow:
         image_window.pleaseWait_image()   
         self.update_gui()
         self.update_patient_data() 
-        device.StopAcquisition() 
+        if self.block == 3 or self.block == 7:
+            device.StopAcquisition() 
 
     ################################################################################################################################    
     ################################################################################################################################
