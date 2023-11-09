@@ -601,126 +601,196 @@ class RootWindow:
                 for row in fl:
                     writer.writerow(row)          
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+    
+    ##for gtec    
         
         else: 
             seq_list = [int(x) for x in self.seq if x.isdigit()]
             print('self.seq', self.seq)
             print('seq_list', seq_list)
             print('Trial',self.block)
-            if self.curr_phase.get() == 'Pre-Evaluation':
-                self.patient_progress[1]=self.block+1
-            else:
-                self.patient_progress[3]=self.block+1
+            total_blocks = len(seq_list)
+            device.StartAcquisition(False)
+            # self.receiveBufferBufferLength = 25600000
+            self.receiveBuffer = bytearray(self.receiveBufferBufferLength)
+            
+            
+            tpw_0=[]
+            image_window.pleaseWait_image()
+            for pw in range(0, 60):
+                for p in range(0, 2*self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
+                    device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
+                    pw_0 = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
+                    pw_np_0 = np.reshape(pw_0, (self.numberOfAcquiredChannels,))  # Ensure correct tuple format for reshape
+                    tpw_0.append(pw_np_0.tolist())  # Convert to list before appending
+                tpw_np_0 = np.array(tpw_0)
                 
-            print('randomized_blocks:', seq_list[self.block])
-            image_window.instructions_image()
-            top.update()
-            if self.block == 0 or self.block == 4:
-                device.StartAcquisition(False)
+                csv_filename = f'pw_0_.csv'
+                csv_filepath = os.path.join(pre_folder if self.curr_phase.get() == "Pre-Evaluation" else post_folder, csv_filename)
+                with open(csv_filepath, 'w', newline='') as csvfile:
+                    writer = csv.writer(csvfile)
+                    for row in tpw_np_0:
+                        writer.writerow(row)
+            del tpw_0
+            del tpw_np_0  
             
-            instruction_duration_samples = 250 *150
-            instruction_samples_collected = 0
-            while instruction_samples_collected < instruction_duration_samples:
-                device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
-                instruction_samples_collected += self.FrameLength
-            excel_file_lable = pd.read_csv(f'Block{seq_list[self.block]}_key.csv')
-            
-            tdataarray=[]
-            tdata=[]
-            root.update()
-            
-            for j in range (0,42):
-                row_data = excel_file_lable.iloc[j,[1, 2, 3]].to_numpy()
-                print('row_data', row_data)
-                image_window.next_image()  
-                if j==0:
-                      
-                    for i in range(0, 5*self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
-                        device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
-                        key_pressed = self.key_detector.check_key_press()
-                        # Convert receive buffer to numpy float array 
-                        dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
-                        data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength,
-                        combined_data = np.concatenate((data, row_data))
-                        combined_data = np.concatenate((combined_data,[key_pressed]))
-                        tdata.append(combined_data)
-                        tdataarray = np.array(tdata)    
-
-                    csv_filename = f'raw_eeg_block_{seq_list[self.block]}.csv'
-                    if self.curr_phase.get() == "Pre-Evaluation":  
-                        csv_filepath = os.path.join(pre_folder, csv_filename)
-                    if self.curr_phase.get() == "Post-Evaluation":  
-                        csv_filepath = os.path.join(post_folder, csv_filename)
-                    with open(csv_filepath, 'w', newline='') as csvfile:
-                        writer = csv.writer(csvfile)
-                        for row in tdataarray:
-                            writer.writerow(row)
-
-                elif j==1:
-                    for i in range(0, 2*self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
-                        device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
-                        key_pressed = self.key_detector.check_key_press()
-                        # Convert receive buffer to numpy float array 
-                        dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
-                        data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength,
-                        combined_data = np.concatenate((data, row_data))
-                        combined_data = np.concatenate((combined_data,[key_pressed]))
-                        tdata.append(combined_data)
-                        tdataarray = np.array(tdata)    
-
-                    csv_filename = f'raw_eeg_block_{seq_list[self.block]}.csv'
-                    if self.curr_phase.get() == "Pre-Evaluation":  
-                        csv_filepath = os.path.join(pre_folder, csv_filename)
-                    if self.curr_phase.get() == "Post-Evaluation":  
-                        csv_filepath = os.path.join(post_folder, csv_filename)
-                    with open(csv_filepath, 'w', newline='') as csvfile:
-                        writer = csv.writer(csvfile)
-                        for row in tdataarray:
-                            writer.writerow(row)
-
+            tpw=[]
+            for pw2 in range(0, 60):
+                for p in range(0, self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
+                    device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
+                    pw = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
+                    pw_np = np.reshape(pw, (self.numberOfAcquiredChannels,))  # Ensure correct tuple format for reshape
+                    tpw.append(pw_np.tolist())  # Convert to list before appending                
+                tpw_np = np.array(tpw)
+                
+                csv_filename = f'pw_2_.csv'
+                csv_filepath = os.path.join(pre_folder if self.curr_phase.get() == "Pre-Evaluation" else post_folder, csv_filename)
+                with open(csv_filepath, 'w', newline='') as csvfile:
+                    writer = csv.writer(csvfile)
+                    for row in tpw_np:
+                        writer.writerow(row)
+            del tpw
+            del tpw_np
+                 
+            for self.block in range(total_blocks):
+                print('total_blocks:', total_blocks)
+                if self.curr_phase.get() == 'Pre-Evaluation':
+                    self.patient_progress[1]=self.block+1
                 else:
-                    for i in range(0, self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
-                        device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
-                        key_pressed = self.key_detector.check_key_press()
-                        # Convert receive buffer to numpy float array 
-                        dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
-                        data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength,
-                        combined_data = np.concatenate((data, row_data))
-                        combined_data = np.concatenate((combined_data,[key_pressed]))
-                        tdata.append(combined_data)
-                        tdataarray = np.array(tdata)    
+                    self.patient_progress[3]=self.block+1    
+                print('randomized_blocks:', seq_list[self.block])
+                tdata_inst=[]
+                image_window.instructions_image()
+                top.update()
 
-                    csv_filename = f'raw_eeg_block_{seq_list[self.block]}.csv'
-                    if self.curr_phase.get() == "Pre-Evaluation":  
-                        csv_filepath = os.path.join(pre_folder, csv_filename)
-                    if self.curr_phase.get() == "Post-Evaluation":  
-                        csv_filepath = os.path.join(post_folder, csv_filename)
-                    with open(csv_filepath, 'w', newline='') as csvfile:
-                        writer = csv.writer(csvfile)
-                        for row in tdataarray:
-                            writer.writerow(row)
+                for p in range(0, 5* self.numberOfGetDataCalls):  # self.numberOfGetDataCalls=250
+                    device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
+                    dataa_inst = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
+                    data_inst = np.reshape(dataa_inst, (self.numberOfAcquiredChannels,))  # Ensure correct tuple format for reshape
+                    tdata_inst.append(data_inst.tolist())  # Convert to list before appending
+                
+                data_inst_np = np.array(tdata_inst)
+                print("Sample data:", data_inst_np[:5])
 
-                        
-                print(j) 
-            del seq_list  
-            del tdata
-            del tdataarray
-        image_window.pleaseWait_image()   
-        self.update_gui()
-        self.update_patient_data() 
-        if self.block == 3 or self.block == 7:
-            device.StopAcquisition() 
+                csv_filename = f'data_inst_np_{self.block}_{seq_list[self.block]}.csv'
+                csv_filepath = os.path.join(pre_folder if self.curr_phase.get() == "Pre-Evaluation" else post_folder, csv_filename)
+
+                with open(csv_filepath, 'w', newline='') as csvfile:
+                    writer = csv.writer(csvfile)
+                    for row in data_inst_np:
+                        writer.writerow(row)
+
+                del tdata_inst
+                del data_inst_np
+
+                
+                
+                
+                excel_file_lable = pd.read_csv(f'Block{seq_list[self.block]}_key.csv')
+                tdataarray=[]
+                tdata=[]
+                root.update()
+                
+                for j in range (0,42):
+                    row_data = excel_file_lable.iloc[j,[1, 2, 3]].to_numpy()
+                    print('row_data', row_data)
+                    image_window.next_image()  
+                    if j==0:
+                        for i in range(0, 5*self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
+                            device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
+                            key_pressed = self.key_detector.check_key_press()
+                            # Convert receive buffer to numpy float array 
+                            dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
+                            data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength,
+                            combined_data = np.concatenate((data, row_data))
+                            combined_data = np.concatenate((combined_data,[key_pressed]))
+                            tdata.append(combined_data)
+                            tdataarray = np.array(tdata)    
+
+                        csv_filename = f'raw_eeg_block_{self.block}_{seq_list[self.block]}.csv'
+                        if self.curr_phase.get() == "Pre-Evaluation":  
+                            csv_filepath = os.path.join(pre_folder, csv_filename)
+                        if self.curr_phase.get() == "Post-Evaluation":  
+                            csv_filepath = os.path.join(post_folder, csv_filename)
+                        with open(csv_filepath, 'w', newline='') as csvfile:
+                            writer = csv.writer(csvfile)
+                            for row in tdataarray:
+                                writer.writerow(row)
+
+                    elif j==1:
+                        for i in range(0, 2*self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
+                            device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
+                            key_pressed = self.key_detector.check_key_press()
+                            # Convert receive buffer to numpy float array 
+                            dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
+                            data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength,
+                            combined_data = np.concatenate((data, row_data))
+                            combined_data = np.concatenate((combined_data,[key_pressed]))
+                            tdata.append(combined_data)
+                            tdataarray = np.array(tdata)    
+
+                        csv_filename = f'raw_eeg_block_{self.block}_{seq_list[self.block]}.csv'
+                        if self.curr_phase.get() == "Pre-Evaluation":  
+                            csv_filepath = os.path.join(pre_folder, csv_filename)
+                        if self.curr_phase.get() == "Post-Evaluation":  
+                            csv_filepath = os.path.join(post_folder, csv_filename)
+                        with open(csv_filepath, 'w', newline='') as csvfile:
+                            writer = csv.writer(csvfile)
+                            for row in tdataarray:
+                                writer.writerow(row)
+                    else:
+                        for i in range(0, self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
+                            device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
+                            key_pressed = self.key_detector.check_key_press()
+                            # Convert receive buffer to numpy float array 
+                            dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
+                            data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength,
+                            combined_data = np.concatenate((data, row_data))
+                            combined_data = np.concatenate((combined_data,[key_pressed]))
+                            tdata.append(combined_data)
+                            tdataarray = np.array(tdata)    
+
+                        csv_filename = f'raw_eeg_block_{self.block}_{seq_list[self.block]}.csv'
+                        if self.curr_phase.get() == "Pre-Evaluation":  
+                            csv_filepath = os.path.join(pre_folder, csv_filename)
+                        if self.curr_phase.get() == "Post-Evaluation":  
+                            csv_filepath = os.path.join(post_folder, csv_filename)
+                        with open(csv_filepath, 'w', newline='') as csvfile:
+                            writer = csv.writer(csvfile)
+                            for row in tdataarray:
+                                writer.writerow(row)       
+                    print('j:', j) 
+                
+                del tdata
+                del tdataarray
+                tdata_pw=[]
+                image_window.pleaseWait_image()
+                
+                for k in range(0, 10*self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
+                    device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
+                    dataa_pw = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
+                    data_pw = np.reshape(dataa_pw, (self.numberOfAcquiredChannels)) #self.FrameLength,
+                    tdata_pw.append(data_pw.tolist())
+                data_pw_np = np.array(tdata_pw)    
+
+                csv_filename = f'data_pw_np_{self.block}_{seq_list[self.block]}.csv'
+                if self.curr_phase.get() == "Pre-Evaluation":  
+                    csv_filepath = os.path.join(pre_folder, csv_filename)
+                if self.curr_phase.get() == "Post-Evaluation":  
+                    csv_filepath = os.path.join(post_folder, csv_filename)
+                with open(csv_filepath, 'w', newline='') as csvfile:
+                    writer = csv.writer(csvfile)
+                    for row in data_pw_np:
+                        writer.writerow(row)    
+                del tdata_pw
+                del data_pw_np
+                self.update_gui()
+                self.update_patient_data()
+            
+               
+                # self.receiveBuffer = np.empty_like(self.receiveBuffer)
+              
+        device.StopAcquisition() 
 
     ################################################################################################################################    
     ################################################################################################################################
