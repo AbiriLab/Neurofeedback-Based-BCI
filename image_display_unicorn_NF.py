@@ -61,7 +61,6 @@ class DisplayImagenf:
         gray_img = self.create_gray_image(800, 600)  # Size can be adjusted
         self.next_image(gray_img)
 
-   
     def create_black_image_with_cross(self, width, height, line_width=5, cross_size_ratio=0.06):
         img = Image.new('RGB', (width, height), 'black')
         draw = ImageDraw.Draw(img)
@@ -79,12 +78,9 @@ class DisplayImagenf:
         draw.line((width // 2, top, width // 2, bottom), fill='white', width=line_width)
         return img
 
-
-
     def display_black_image_with_cross(self):
         black_img_with_cross = self.create_black_image_with_cross(800, 600)  # Size can be adjusted
         self.next_image(black_img_with_cross)
-
 
     def create_instruct_order(self):
         if not self.single_block:
