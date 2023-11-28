@@ -336,6 +336,7 @@ class RootWindow:
             image_window.pleaseWait_image()
             self.image_window_open = True
         top.update()
+        
     ################################################################################################################################    
     ################################################################################################################################
     ################################################################################################################################   
@@ -437,11 +438,37 @@ class RootWindow:
             self.patient_progress[2]=self.block+1
             print('randomized_blocks:',seq_list[self.block])
 
-            image_window.instructions_image_nf()
-            top.update()
-            time.sleep(5)
+
             device.StartAcquisition(False)
         
+
+            
+            # tpw_0=[]
+            image_window.pleaseWait_image()
+            for pw in range(0, 1):
+                for p in range(0, 2*self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
+                    device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
+                    # pw_0 = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
+                    # pw_np_0 = np.reshape(pw_0, (self.numberOfAcquiredChannels,))  # Ensure correct tuple format for reshape
+                    # tpw_0.append(pw_np_0.tolist())  # Convert to list before appending                
+            # del tpw_0
+           
+            # tpw=[]
+            for pw2 in range(0, 1):
+                for p in range(0, self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
+                    device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
+                    # pw = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
+                    # pw_np = np.reshape(pw, (self.numberOfAcquiredChannels,))  # Ensure correct tuple format for reshape
+                    # tpw.append(pw_np.tolist())  # Convert to list before appending                
+            # del tpw
+    
+            image_window.instructions_image_nf()
+            for pw2 in range(0, 1):
+                for p in range(0, self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
+                    device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
+            top.update()
+            # time.sleep(5)
+            
             model_filename = r'C:\Users\tnlab\OneDrive\Documents\GitHub\AlphaFold\Neurofeedback-Based-BCI\best_mlp_model.joblib'
             loaded_model = joblib.load(model_filename)
             print("Model loaded.")
@@ -456,14 +483,17 @@ class RootWindow:
             
             current_directory = os.getcwd()
             # print(f"Current directory: {current_directory}")
-            
+
+
             final_lable_array=[]
             raw=[]
             PP=[]
             for j in range (0,10):
+                
                 selected_columns = ['Fz', 'FC1', 'FC2', 'C3', 'Cz', 'C4', 'CPz','Pz']
                 tdata=[]
                 lable=[]
+                
                 if j==0:
                     image_window.display_gray_image()
                     for n in range(0,5): #looking at each image for 5 seconds
@@ -482,12 +512,15 @@ class RootWindow:
                         lable.append(label_array)
                         nplable=np.array(lable).reshape(-1, 4)
                         fal = np.concatenate((new_totdata_array, nplable), axis=1)
-                        # print('nplable', nplable.shape)
                     del tdata
                     final_lable_array.append(fal)
                     fl=np.array(final_lable_array).reshape(-1, 21)
-                    # print('fl', fl.shape)
-               
+
+                    buffer = np.append(buffer, Last_data[-250:, :], axis=0)
+                    if buffer.shape[0] > buffer_size_samples:
+                        num_extra_samples = buffer.shape[0] - buffer_size_samples
+                        buffer = buffer[num_extra_samples:, :]
+                    
                 elif j==1:
                     image_window.display_black_image_with_cross()
                     for n in range(0,2): #looking at each image for 5 seconds
@@ -503,16 +536,20 @@ class RootWindow:
                         raw.append(Last_data)
                         label_array = np.zeros((250, 4), dtype=object) 
                         label_array.fill('B')
-
                         lable.append(label_array)
                         nplable=np.array(lable).reshape(-1, 4)
                         fal = np.concatenate((new_totdata_array, nplable), axis=1)
-                        # print('nplable', nplable.shape)
                     del tdata
-                    
+
                     final_lable_array.append(fal)
-                    fl=np.array(final_lable_array).reshape(-1, 21)
-                    # print('fl', fl.shape)
+                    final_lable_array_np = np.concatenate(final_lable_array, axis=0) if final_lable_array else np.empty((0, 21))
+                    print('final_lable_array_np.shape', final_lable_array_np.shape)
+                    fl=np.array(final_lable_array_np).reshape(-1, 21)
+
+                    buffer = np.append(buffer, Last_data[-250:, :], axis=0)
+                    if buffer.shape[0] > buffer_size_samples:
+                        num_extra_samples = buffer.shape[0] - buffer_size_samples
+                        buffer = buffer[num_extra_samples:, :]
 
                 else:
                     image_window.start_new_trial()
@@ -541,12 +578,14 @@ class RootWindow:
                             Combined_raw_eeg_nf_bp[:, column], filter_states[column] = self.butter_bandpass_filter(
                                 Combined_raw_eeg_nf_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5, initial_state=filter_states[column])
                         combined_raw_eeg_nf_bp = pd.DataFrame(Combined_raw_eeg_nf_bp)
+                        
                         # 2. Artifact rejection
                         BP_artifact_RJ = combined_raw_eeg_nf_bp.copy()
                         initial_BP_artifact_RJ = BP_artifact_RJ.iloc[:-(n+1)*250]
                         for channel in range (8):
                             BP_artifact_RJ= self.reject_artifacts(BP_artifact_RJ.iloc[-(n+1)*250:], channel)     
                         DN=pd.concat([initial_BP_artifact_RJ, BP_artifact_RJ], axis=0)
+                        
                         # 4. Denoising and other preprocessing
                         DN.columns = selected_columns
                         eeg_df_denoised = self.preprocess(DN, col_names=selected_columns, n_clusters=[50]*len(selected_columns))                            
@@ -567,6 +606,7 @@ class RootWindow:
                                 label_array[row, 0] = 'N'
                         label_array[:, 1] =label_array[:, 0]         
                         label_array[:, 3] = 1 if correct_prediction else 0        
+                        
                         # Adjust alpha
                         if instruction == 'Face':
                             if correct_prediction:
@@ -589,20 +629,18 @@ class RootWindow:
                     del tdata
                     
                     final_lable_array.append(fal)
-                    fl=np.array(final_lable_array).reshape(-1, 21)
-                    # print('fl', fl.shape)
+                    final_lable_array_np = np.concatenate(final_lable_array, axis=0) if final_lable_array else np.empty((0, 21))
+                    print('final_lable_array_np.shape', final_lable_array_np.shape)
+                    fl=np.array(final_lable_array_np).reshape(-1, 21)
+                    
             del seq_list 
             csv_filename = f'fl_{image_window.curr_block}.csv'
             csv_filepath = os.path.join(neuro_folder, csv_filename)
-                
-                
+                    
             with open(csv_filepath, 'w', newline='') as csvfile:
                 writer = csv.writer(csvfile)
                 for row in fl:
                     writer.writerow(row)          
-        
-    
-    ##for gtec    
         
         else: 
             seq_list = [int(x) for x in self.seq if x.isdigit()]
@@ -613,7 +651,6 @@ class RootWindow:
             device.StartAcquisition(False)
             # self.receiveBufferBufferLength = 25600000
             self.receiveBuffer = bytearray(self.receiveBufferBufferLength)
-            
             
             tpw_0=[]
             image_window.pleaseWait_image()
@@ -679,13 +716,9 @@ class RootWindow:
                     writer = csv.writer(csvfile)
                     for row in data_inst_np:
                         writer.writerow(row)
-
                 del tdata_inst
                 del data_inst_np
 
-                
-                
-                
                 excel_file_lable = pd.read_csv(f'Block{seq_list[self.block]}_key.csv')
                 tdataarray=[]
                 tdata=[]
