@@ -178,7 +178,7 @@ class RootWindow:
         self.start_trial_but = Button(self.frame_2, text="Create Classifier", bg="yellow", font=10, command=self.Create_SVMScript) #self.start_trial                           
         self.start_trial_but.grid(row=5, column=0, pady=15, padx=5) 
         
-        self.create_trial_but = Button(self.frame_2, text="Recalibrate SVM", bg="yellow", font=10, command=self.run_RSVMScript)
+        self.create_trial_but = Button(self.frame_2, text="Recalibrate Classifier", bg="yellow", font=10, command=self.run_RSVMScript)
         self.create_trial_but.grid(row=5, column=1, columnspan=2, pady=15, padx=5)
         
         self.end_trial_but = Button(self.frame_2, text="Score", bg="pink", font=("TkDefaultFont", 15), width=20, command=self.HBScore)
@@ -445,29 +445,19 @@ class RootWindow:
             
             # tpw_0=[]
             image_window.pleaseWait_image()
-            for pw in range(0, 1):
+            for pw in range(0, 60):
                 for p in range(0, 2*self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
-                    device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
-                    # pw_0 = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
-                    # pw_np_0 = np.reshape(pw_0, (self.numberOfAcquiredChannels,))  # Ensure correct tuple format for reshape
-                    # tpw_0.append(pw_np_0.tolist())  # Convert to list before appending                
-            # del tpw_0
-           
+                    device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)         
             # tpw=[]
-            for pw2 in range(0, 1):
+            for pw2 in range(0, 60):
                 for p in range(0, self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
-                    # pw = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
-                    # pw_np = np.reshape(pw, (self.numberOfAcquiredChannels,))  # Ensure correct tuple format for reshape
-                    # tpw.append(pw_np.tolist())  # Convert to list before appending                
-            # del tpw
     
             image_window.instructions_image_nf()
-            for pw2 in range(0, 1):
+            for pw2 in range(0, 5):
                 for p in range(0, self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
             top.update()
-            # time.sleep(5)
             
             model_filename = r'C:\Users\tnlab\OneDrive\Documents\GitHub\AlphaFold\Neurofeedback-Based-BCI\best_mlp_model.joblib'
             loaded_model = joblib.load(model_filename)
@@ -480,20 +470,16 @@ class RootWindow:
             buffer = np.zeros((buffer_size_samples, 8))  # 8 is the number of EEG channels
             face_alpha_values = [0,70,128,204,255] 
             face_alpha_index=2
-            
             current_directory = os.getcwd()
             # print(f"Current directory: {current_directory}")
-
 
             final_lable_array=[]
             raw=[]
             PP=[]
             for j in range (0,10):
-                
                 selected_columns = ['Fz', 'FC1', 'FC2', 'C3', 'Cz', 'C4', 'CPz','Pz']
                 tdata=[]
                 lable=[]
-                
                 if j==0:
                     image_window.display_gray_image()
                     for n in range(0,5): #looking at each image for 5 seconds
@@ -793,7 +779,6 @@ class RootWindow:
                             for row in tdataarray:
                                 writer.writerow(row)       
                     print('j:', j) 
-                
                 del tdata
                 del tdataarray
                 tdata_pw=[]
@@ -822,27 +807,29 @@ class RootWindow:
             
                
                 # self.receiveBuffer = np.empty_like(self.receiveBuffer)
-              
-        device.StopAcquisition() 
+        image_window.pleaseWait_image()   
+        self.update_gui()
+        self.update_patient_data() 
+        device.StopAcquisition()      
 
     ################################################################################################################################    
     ################################################################################################################################
     ################################################################################################################################  
     def Create_SVMScript(self):
         try:
-            subprocess.run(["python", "RSVM_V1.py"], check=True)
+            subprocess.run(["python", "MLP_1.py"], check=True)
         except subprocess.CalledProcessError as e:
-            print(f"The RSVM_V1.py script encountered an error: {e}")
+            print(f"The MLP_1.py script encountered an error: {e}")
         except FileNotFoundError:
-            print("The RSVM_V1.py script was not found.")
+            print("The MLP_1.py script was not found.")
 
     def run_RSVMScript(self):
         try:
-            subprocess.run(["python", "RSVM_V1.py"], check=True)
+            subprocess.run(["python", "MLP_1.py"], check=True)
         except subprocess.CalledProcessError as e:
-            print(f"The RSVM_V1.py script encountered an error: {e}")
+            print(f"The MLP_1.py script encountered an error: {e}")
         except FileNotFoundError:
-            print("The RSVM_V1.py script was not found.")
+            print("The MLP_1.py script was not found.")
             
     def end_trial(self):
         global image_window

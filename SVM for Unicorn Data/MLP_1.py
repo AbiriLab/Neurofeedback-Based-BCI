@@ -38,6 +38,7 @@ import optuna
 from sklearn.datasets import make_classification
 from PIL import Image, ImageDraw, ImageFont
 from joblib import dump
+
 ####################################################################################
 def butter_bandpass(lowcut, highcut, fs, order=5):
     nyq = 0.5 * fs
@@ -148,7 +149,7 @@ for folder in folders_to_use:
     if os.path.exists(full_folder_path_) and os.path.isdir(full_folder_path_):
         print(f"Reading from: {full_folder_path_}")
         for file_name in os.listdir(full_folder_path_):
-            if file_name.endswith('.csv') and file_name.startswith('raw_eeg_block'):
+            if file_name.endswith('.csv') and (file_name.startswith('raw_eeg_block') or file_name.startswith('fl_')):
                 file_path = os.path.join(full_folder_path_, file_name)
                 s_temp = pd.read_csv(file_path, header=None)
                 inst = s_temp.iloc[:, 17]
@@ -188,108 +189,122 @@ for folder in folders_to_use:
 # Define the new list to store baseline corrected data
 baseline_corrected = []
 for baseline, dd in zip(B, PP):
-    # Calculate the average of the baseline data points for each channel
     baseline_avg = baseline.mean()
-    # Subtract the baseline average from each data point in 'dd' for each channel
     corrected = dd -baseline_avg
-    # Append the baseline corrected data to the new list
     baseline_corrected.append(corrected)
     
 baseline_corrected_np=np.array(baseline_corrected)
-print(baseline_corrected_np.shape)
+print('baseline_corrected_np.shape',baseline_corrected_np.shape)
 
 event_np=np.array(event)
-print(event_np.shape)
+print('event_np.shape',event_np.shape)
 label_np=event_np[:,1750:]
-print(label_np.shape)
+print('label_np.shape',label_np.shape)
 
 fs=250
 B_N=int(len(baseline_corrected)) #Number of blocks
 PP_NP=baseline_corrected_np #shape: (B_N, 10000, 8=Channel Numbers)
 
 EVENTS=label_np.reshape(B_N*(baseline_corrected_np.shape[1]), 1)
-
+print('EVENTS', EVENTS)
 denoised=PP_NP.reshape(B_N*(baseline_corrected_np.shape[1]), 8) # seprate each blocks' signal 
 pp_sig_event=np.concatenate((denoised,EVENTS), axis=1) 
+
+
+event_column_index = pp_sig_event.shape[1] - 1
+
+# Create a boolean mask where the event is not 'n'
+mask = pp_sig_event[:, event_column_index] != 'N'
+
+# Apply the mask to filter out rows with event 'n'
+pp_sig_event_filtered = pp_sig_event[mask]
+pp_sig_event_no_event_column = pp_sig_event_filtered[:, :-1]
+
 
 labels=[] 
 face = [] #lable=0
 scene=[]#lable=1
 base=[] # label=2
 # Aassuming correctness for the human behavior
-for i in range(len(pp_sig_event)): #len(pp_sig_event) = the whole sample points, (df_temp.shape[0]*B_N)
-    if 'M' in pp_sig_event[i, 8] or 'F' in pp_sig_event[i, 8]:
-        face.append(pp_sig_event[i])
+for i in range(len(pp_sig_event_filtered)): #len(pp_sig_event) = the whole sample points, (df_temp.shape[0]*B_N)
+    if 'M' in pp_sig_event_filtered[i, 8] or 'F' in pp_sig_event_filtered[i, 8]:
+        face.append(pp_sig_event_filtered[i])
         labels.append(0)
-    if 'I' in pp_sig_event[i, 8] or 'O' in pp_sig_event[i, 8]:
-        scene.append(pp_sig_event[i]) 
+    if 'I' in pp_sig_event_filtered[i, 8] or 'O' in pp_sig_event_filtered[i, 8] or 'S' in pp_sig_event_filtered[i, 8]:
+        scene.append(pp_sig_event_filtered[i]) 
         labels.append(1)        
 face = np.array(face)
+print('face.shape', face.shape)
 scene = np.array(scene)
+print('scene.shape', scene.shape)
 labels=np.array(labels) 
-
+print('label.shape', labels.shape, labels)
 ###############################################################################################################
-Human_Behavior_np=np.array(Human_Behavior).reshape(B_N*(baseline_corrected_np.shape[1]), 4)
-denoised_im_ins_HB = np.concatenate((denoised, Human_Behavior_np), axis=1)
+# Human_Behavior_np=np.array(Human_Behavior).reshape(B_N*(baseline_corrected_np.shape[1]), 4)
+# denoised_im_ins_HB = np.concatenate((denoised, Human_Behavior_np), axis=1)
 
-SCORE = []
-for row in denoised_im_ins_HB:
-    condition1 = (row[-4] == row[-3]) or (row[-4] == row[-2])
-    condition2 = row[-1] == 1
-    condition3 = (row[-4] != row[-3]) and (row[-4] != row[-2])
-    condition4 = row[-1] == 0
-    if (condition1 and condition2) or (condition3 and condition4):
-        SCORE.append([1])
-    else:
-        SCORE.append([0])
+# SCORE = []
+# for row in denoised_im_ins_HB:
+#     condition1 = (row[-4] == row[-3]) or (row[-4] == row[-2])
+#     condition2 = row[-1] == 1
+#     condition3 = (row[-4] != row[-3]) and (row[-4] != row[-2])
+#     condition4 = row[-1] == 0
+#     if (condition1 and condition2) or (condition3 and condition4):
+#         SCORE.append([1])
+#     else:
+#         SCORE.append([0])
 
-print('score length', len(SCORE))
-#score
-win_size = 250
-S = []
-for i in range(0, len(SCORE), win_size):
-    S_data = SCORE[i:i+win_size]
-    S.append(S_data)
-# print('s lenght', len(S))
-# print(S)
-S_np = np.array(S)
-print('S_np shape', S_np.shape)
-result_list = []
+# print('score length', len(SCORE))
+# #score
+# win_size = 250
+# S = []
+# for i in range(0, len(SCORE), win_size):
+#     S_data = SCORE[i:i+win_size]
+#     S.append(S_data)
+# # print('s lenght', len(S))
+# # print(S)
+# S_np = np.array(S)
+# print('S_np shape', S_np.shape)
+# result_list = []
 
-# Iterate through the "images" (first dimension)
-for i in range(S_np.shape[0]):
-    # Check if all 250 samples are 0
-    if np.all(S_np[i, :, 0] == 0):
-        result_list.append(0)
-    else:
-        result_list.append(1)
-# print(result_list)
-mean_value = sum(result_list) / len(result_list)
-print("Mean of result list:", mean_value)
-percentage_of_ones = mean_value * 100
-rounded_percentage_of_ones = round(percentage_of_ones)
-n=str(rounded_percentage_of_ones)
-print('n', n)
-img=Image.new('RGB', (1000,1000), color=(73,109,137))
-d=ImageDraw.Draw(img)
-font_0=ImageFont.truetype("arial.ttf", 500)
-font_1=ImageFont.truetype("arial.ttf", 150)
-d.text((150,50), "Your Score", font=font_1, fill=(255,255,0))
-d.text((250,250), n, font=font_0, fill=(255,255,0))
-img_file_name = f"Score.png"
-img_file_path = os.path.join(full_folder_path_, img_file_name) 
-img.save(img_file_path, index=False)
+# # Iterate through the "images" (first dimension)
+# for i in range(S_np.shape[0]):
+#     # Check if all 250 samples are 0
+#     if np.all(S_np[i, :, 0] == 0):
+#         result_list.append(0)
+#     else:
+#         result_list.append(1)
+# # print(result_list)
+# mean_value = sum(result_list) / len(result_list)
+# print("Mean of result list:", mean_value)
+# percentage_of_ones = mean_value * 100
+# rounded_percentage_of_ones = round(percentage_of_ones)
+# n=str(rounded_percentage_of_ones)
+# print('n', n)
+# img=Image.new('RGB', (1000,1000), color=(73,109,137))
+# d=ImageDraw.Draw(img)
+# font_0=ImageFont.truetype("arial.ttf", 500)
+# font_1=ImageFont.truetype("arial.ttf", 150)
+# d.text((150,50), "Your Score", font=font_1, fill=(255,255,0))
+# d.text((250,250), n, font=font_0, fill=(255,255,0))
+# img_file_name = f"Score.png"
+# img_file_path = os.path.join(full_folder_path_, img_file_name) 
+# img.save(img_file_path, index=False)
 
 ################################################################################################################
 label=labels.reshape(int(labels.shape[0]/fs), fs)
 Y=np.squeeze(label[:,0])
-denoised_reshaped = denoised.reshape(int(denoised.shape[0]/250), 250, 8)
+print('Y.shape', Y.shape)
+denoised_reshaped = pp_sig_event_no_event_column.reshape(int(pp_sig_event_no_event_column.shape[0]/250), 250, 8)
+print('denoised_reshaped.shape',denoised_reshaped.shape)
+
 
 mlp_data=denoised_reshaped.reshape(denoised_reshaped.shape[0], denoised_reshaped.shape[1]*denoised_reshaped.shape[2])
-print(mlp_data.shape)
+print('mlp_data.shape', mlp_data.shape)
 
 af_mlp=mlp_data
 Y_mlp=np.squeeze(label[:,0])
+print(af_mlp.shape, Y_mlp.shape)
 af_mlp, Y_mlp= shuffle(af_mlp, Y_mlp)
 print(af_mlp.shape, Y_mlp.shape)
 # Balance the dataset
