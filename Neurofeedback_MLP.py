@@ -348,6 +348,11 @@ class RootWindow:
         b, a = butter(order, [low, high], btype='band')
         return b, a
 
+    def butter_bandpass_filter_base(self, data, lowcut, highcut, fs, order=5):
+        b, a = self.butter_bandpass(lowcut, highcut, fs, order=order)
+        y = filtfilt(b, a, data)
+        return y
+
     def butter_bandpass_filter(self, data, lowcut, highcut, fs, order=5, initial_state=None):
         b, a = self.butter_bandpass(lowcut, highcut, fs, order=order)
         # If no initial state is provided, calculate it.
@@ -398,10 +403,12 @@ class RootWindow:
         x = np.arange(len(df[channel]))
         cs = CubicSpline(x[~spikes], df[channel][~spikes]) # Interpolate using Cubic Spline
         interpolated_values = cs(x)
-        interpolated_values[spikes] *= 0.1  # Make interpolated values 0.1 times smaller
+        interpolated_values[spikes] *= 0.01  # Make interpolated values 0.1 times smaller
         # Check each interpolated value's difference from median and compare to the threshold
         spike_values = np.abs(interpolated_values - median) > threshold_factor * mad
-        interpolated_values[spike_values] *= 0.001 
+        interpolated_values[spike_values] *= 0.01 
+        spike_values = np.abs(interpolated_values - median) > threshold_factor * mad
+        interpolated_values[spike_values] *= 0.01 
         df[channel] = interpolated_values
         return df
 
@@ -438,18 +445,15 @@ class RootWindow:
             self.patient_progress[2]=self.block+1
             print('randomized_blocks:',seq_list[self.block])
 
-
             device.StartAcquisition(False)
         
-
-            
             # tpw_0=[]
             image_window.pleaseWait_image()
-            for pw in range(0, 60):
+            for pw in range(0, 5):
                 for p in range(0, 2*self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)         
             # tpw=[]
-            for pw2 in range(0, 60):
+            for pw2 in range(0, 1):
                 for p in range(0, self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
     
@@ -459,9 +463,16 @@ class RootWindow:
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
             top.update()
             
-            model_filename = r'C:\Users\tnlab\OneDrive\Documents\GitHub\AlphaFold\Neurofeedback-Based-BCI\best_mlp_model.joblib'
+            
+            print('self.block', self.block)
+            Report_Number = self.block
+            folder_name = patient_name
+
+            # Use an f-string to construct the file path
+            model_filename  = fr'C:\Users\tnlab\OneDrive\Documents\GitHub\AlphaFold\Neurofeedback-Based-BCI\best_mlp_{Report_Number}_{folder_name}.joblib'
+            # model_filename = r'C:\Users\tnlab\OneDrive\Documents\GitHub\AlphaFold\Neurofeedback-Based-BCI\best_mlp_{Report_Number}_{folder_name}.joblib'
             loaded_model = joblib.load(model_filename)
-            print("Model loaded.")
+            print('model_filename', model_filename)
             
             # Initialize the buffer
             buffer_size_seconds = 5
@@ -476,10 +487,12 @@ class RootWindow:
             final_lable_array=[]
             raw=[]
             PP=[]
+            base=[]
             for j in range (0,10):
-                selected_columns = ['Fz', 'FC1', 'FC2', 'C3', 'Cz', 'C4', 'CPz','Pz']
+                selected_columns = ['Fz', 'C3', 'Cz', 'C4', 'Pz', 'Po7', 'Oz', 'Po8']
                 tdata=[]
                 lable=[]
+                
                 if j==0:
                     image_window.display_gray_image()
                     for n in range(0,5): #looking at each image for 5 seconds
@@ -492,7 +505,10 @@ class RootWindow:
                             tdataarray=np.array(tdata)    
                         new_totdata_array = tdataarray.reshape(-1, 17) 
                         Last_data=new_totdata_array[:, :8]
+                        
                         raw.append(Last_data)
+                      
+                        
                         label_array = np.zeros((250, 4), dtype=object) 
                         label_array.fill('G')
                         lable.append(label_array)
@@ -501,7 +517,9 @@ class RootWindow:
                     del tdata
                     final_lable_array.append(fal)
                     fl=np.array(final_lable_array).reshape(-1, 21)
-
+                    
+                    grey=Last_data.copy()
+                    
                     buffer = np.append(buffer, Last_data[-250:, :], axis=0)
                     if buffer.shape[0] > buffer_size_samples:
                         num_extra_samples = buffer.shape[0] - buffer_size_samples
@@ -526,6 +544,36 @@ class RootWindow:
                         nplable=np.array(lable).reshape(-1, 4)
                         fal = np.concatenate((new_totdata_array, nplable), axis=1)
                     del tdata
+
+                    black=Last_data.copy()
+                    print('black', black.shape)
+                    
+                    
+                    base=np.vstack((grey, black))
+                    print('base', base.shape)
+                    # base_np=np.array(base)
+                    # print('base_np',  base_np.shape, base_np)
+                    num_columns_nf = 8
+                    base_bp=np.copy(base)
+
+                    # Baseline processing
+                    for column in range(num_columns_nf):
+                        base_bp[:, column]= self.butter_bandpass_filter_base(
+                            base_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5)
+                    base_bp = pd.DataFrame(base_bp)
+                        
+                    # 2. Artifact rejection
+                    base_artifact_RJ = base_bp.copy()
+                    for channel in range (8):
+                        base_artifact_RJ= self.reject_artifacts(base_artifact_RJ, channel)     
+                        
+                    # 4. Denoising and other preprocessing
+                    base_artifact_RJ.columns = selected_columns
+                    base_df_denoised = self.preprocess(pd.DataFrame(base_artifact_RJ), col_names=selected_columns, n_clusters=[50]*len(selected_columns)) 
+                    print('base_df_denoised', base_df_denoised.shape) 
+                    base_mean=np.mean(base_df_denoised, axis=0)
+                    print('base_mean', type(base_mean), base_mean.shape, base_mean)
+
 
                     final_lable_array.append(fal)
                     final_lable_array_np = np.concatenate(final_lable_array, axis=0) if final_lable_array else np.empty((0, 21))
@@ -575,7 +623,11 @@ class RootWindow:
                         # 4. Denoising and other preprocessing
                         DN.columns = selected_columns
                         eeg_df_denoised = self.preprocess(DN, col_names=selected_columns, n_clusters=[50]*len(selected_columns))                            
-                        chunks = np.array_split(eeg_df_denoised.to_numpy(), 5, axis=0)                    
+                        print('eeg_df_denoised', type(eeg_df_denoised), eeg_df_denoised.shape)
+                        eeg_base_corrected=eeg_df_denoised.subtract(base_mean, axis=1)
+                        print('eeg_base_corrected', eeg_base_corrected.shape)
+                        
+                        chunks = np.array_split(eeg_base_corrected.to_numpy(), 5, axis=0)                    
                         eeg_signal = chunks[4].reshape(8, 250)  # reshaped to (8, 250)
                         Xn=eeg_signal.reshape(-1,2000)
                         predictions =loaded_model.predict(Xn)

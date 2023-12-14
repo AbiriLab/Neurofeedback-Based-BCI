@@ -38,6 +38,7 @@ import optuna
 from sklearn.datasets import make_classification
 from PIL import Image, ImageDraw, ImageFont
 from joblib import dump
+from scipy.signal import butter, filtfilt, lfilter, lfilter_zi
 
 ####################################################################################
 def butter_bandpass(lowcut, highcut, fs, order=5):
@@ -83,8 +84,6 @@ def custom_detrend(df, col_names):
 def preprocess(df, col_names, n_clusters):
     df_new = df.copy()
     df_new = denoise_data(df, col_names, n_clusters)
-    # df_new = z_score(df_new, col_names)
-    # df_new = custom_detrend(df_new, col_names)
     return df_new
 
 def df_to_raw(df, sfreq=250):
@@ -133,7 +132,7 @@ elif phase == 2:
     folders_to_use = [sub_folders[2]]  # 
 print('folders_to_use:', folders_to_use)
 # Iterate over each folder to read the csv files
-selected_columns = ['Fz', 'FC1', 'FC2', 'C3', 'Cz', 'C4', 'CPz', 'Pz']
+selected_columns = ['Fz', 'C3', 'Cz', 'C4', 'Pz', 'Po7', 'Oz', 'Po8']
 
 ################################################################################################
 duration = 40 
@@ -174,7 +173,7 @@ for folder in folders_to_use:
                 # 4. Denoising and other preprocessing
                 BP_artifact_RJ.columns = selected_columns
                 eeg_df_denoised = preprocess(pd.DataFrame(BP_artifact_RJ), col_names=selected_columns, n_clusters=[10]*len(selected_columns))
-                baseline=eeg_df_denoised.iloc[1250:1750,]
+                baseline=eeg_df_denoised.iloc[:1750,]
                 dd=eeg_df_denoised.iloc[1750:,]
                 print(dd.shape)
                 # eeg_df_denoised.plot(subplots=True, figsize=(15, 10), title='Denoised EEG Data')
@@ -240,56 +239,56 @@ print('scene.shape', scene.shape)
 labels=np.array(labels) 
 print('label.shape', labels.shape, labels)
 ###############################################################################################################
-# Human_Behavior_np=np.array(Human_Behavior).reshape(B_N*(baseline_corrected_np.shape[1]), 4)
-# denoised_im_ins_HB = np.concatenate((denoised, Human_Behavior_np), axis=1)
+Human_Behavior_np=np.array(Human_Behavior).reshape(B_N*(baseline_corrected_np.shape[1]), 4)
+denoised_im_ins_HB = np.concatenate((denoised, Human_Behavior_np), axis=1)
 
-# SCORE = []
-# for row in denoised_im_ins_HB:
-#     condition1 = (row[-4] == row[-3]) or (row[-4] == row[-2])
-#     condition2 = row[-1] == 1
-#     condition3 = (row[-4] != row[-3]) and (row[-4] != row[-2])
-#     condition4 = row[-1] == 0
-#     if (condition1 and condition2) or (condition3 and condition4):
-#         SCORE.append([1])
-#     else:
-#         SCORE.append([0])
+SCORE = []
+for row in denoised_im_ins_HB:
+    condition1 = (row[-4] == row[-3]) or (row[-4] == row[-2])
+    condition2 = row[-1] == 1
+    condition3 = (row[-4] != row[-3]) and (row[-4] != row[-2])
+    condition4 = row[-1] == 0
+    if (condition1 and condition2) or (condition3 and condition4):
+        SCORE.append([1])
+    else:
+        SCORE.append([0])
 
-# print('score length', len(SCORE))
-# #score
-# win_size = 250
-# S = []
-# for i in range(0, len(SCORE), win_size):
-#     S_data = SCORE[i:i+win_size]
-#     S.append(S_data)
-# # print('s lenght', len(S))
-# # print(S)
-# S_np = np.array(S)
-# print('S_np shape', S_np.shape)
-# result_list = []
+print('score length', len(SCORE))
+#score
+win_size = 250
+S = []
+for i in range(0, len(SCORE), win_size):
+    S_data = SCORE[i:i+win_size]
+    S.append(S_data)
+# print('s lenght', len(S))
+# print(S)
+S_np = np.array(S)
+print('S_np shape', S_np.shape)
+result_list = []
 
-# # Iterate through the "images" (first dimension)
-# for i in range(S_np.shape[0]):
-#     # Check if all 250 samples are 0
-#     if np.all(S_np[i, :, 0] == 0):
-#         result_list.append(0)
-#     else:
-#         result_list.append(1)
-# # print(result_list)
-# mean_value = sum(result_list) / len(result_list)
-# print("Mean of result list:", mean_value)
-# percentage_of_ones = mean_value * 100
-# rounded_percentage_of_ones = round(percentage_of_ones)
-# n=str(rounded_percentage_of_ones)
-# print('n', n)
-# img=Image.new('RGB', (1000,1000), color=(73,109,137))
-# d=ImageDraw.Draw(img)
-# font_0=ImageFont.truetype("arial.ttf", 500)
-# font_1=ImageFont.truetype("arial.ttf", 150)
-# d.text((150,50), "Your Score", font=font_1, fill=(255,255,0))
-# d.text((250,250), n, font=font_0, fill=(255,255,0))
-# img_file_name = f"Score.png"
-# img_file_path = os.path.join(full_folder_path_, img_file_name) 
-# img.save(img_file_path, index=False)
+# Iterate through the "images" (first dimension)
+for i in range(S_np.shape[0]):
+    # Check if all 250 samples are 0
+    if np.all(S_np[i, :, 0] == 0):
+        result_list.append(0)
+    else:
+        result_list.append(1)
+# print(result_list)
+mean_value = sum(result_list) / len(result_list)
+print("Mean of result list:", mean_value)
+percentage_of_ones = mean_value * 100
+rounded_percentage_of_ones = round(percentage_of_ones)
+n=str(rounded_percentage_of_ones)
+print('n', n)
+img=Image.new('RGB', (1000,1000), color=(73,109,137))
+d=ImageDraw.Draw(img)
+font_0=ImageFont.truetype("arial.ttf", 500)
+font_1=ImageFont.truetype("arial.ttf", 150)
+d.text((150,50), "Your Score", font=font_1, fill=(255,255,0))
+d.text((250,250), n, font=font_0, fill=(255,255,0))
+img_file_name = f"Score.png"
+img_file_path = os.path.join(full_folder_path_, img_file_name) 
+img.save(img_file_path, index=False)
 
 ################################################################################################################
 label=labels.reshape(int(labels.shape[0]/fs), fs)
@@ -349,7 +348,7 @@ def objective(trial):
     return accuracy
 
 study = optuna.create_study(direction='maximize')
-study.optimize(objective, n_trials=70)
+study.optimize(objective, n_trials=10)
 
 print('Number of finished trials: ', len(study.trials))
 print('Best trial:')
