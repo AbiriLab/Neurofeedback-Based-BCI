@@ -432,7 +432,7 @@ class RootWindow:
         pre_folder= os.path.join(patient_folder, "Pre Evaluation")
         post_folder= os.path.join(patient_folder, "Post Evaluation")
         neuro_folder= os.path.join(patient_folder, "Neurofeedback")
-        frequency_bands = {'delta': (0.5, 4),'theta': (4, 8),'alpha': (8, 14),'beta': (14, 30),'gamma': (30, 40),'ERP':(0.4,40)}
+        # frequency_bands = {'delta': (0.5, 4),'theta': (4, 8),'alpha': (8, 14),'beta': (14, 30),'gamma': (30, 40),'ERP':(0.4,40)}
         fs=250
       
         if not os.path.exists(patient_folder):
@@ -447,20 +447,45 @@ class RootWindow:
 
             device.StartAcquisition(False)
         
-            # tpw_0=[]
             image_window.pleaseWait_image()
-            for pw in range(0, 5):
+            pw1=[]
+            for pw in range(0, 1):
                 for p in range(0, 2*self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)         
-            # tpw=[]
-            for pw2 in range(0, 1):
-                for p in range(0, self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
+                    dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
+                    data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength
+                    pw1.append(data.copy())
+                    pw1dataarray=np.array(pw1)    
+                pw1_totdata_array = pw1dataarray.reshape(-1, 17) 
+                pw1_data=pw1_totdata_array[:, :8]
+            pw_data_1=pw1_data.copy()
+            
+            pw2=[]
+            for pw in range(0, 1):
+                for p in range(0, self.numberOfGetDataCalls): 
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
+                    dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
+                    data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength
+                    pw2.append(data.copy())
+                    pw2dataarray=np.array(pw2)    
+                pw2_totdata_array = pw2dataarray.reshape(-1, 17) 
+                pw2_data=pw2_totdata_array[:, :8]
+            pw_data_2=pw2_data.copy()
+
+
     
             image_window.instructions_image_nf()
-            for pw2 in range(0, 5):
-                for p in range(0, self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
+            instdata=[]
+            for pw3 in range(0, 5):
+                for p in range(0, self.numberOfGetDataCalls): 
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
+                    dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
+                    data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength
+                    instdata.append(data.copy())
+                    instdataarray=np.array(instdata)    
+                new_totdata_array = instdataarray.reshape(-1, 17) 
+                instLast_data=new_totdata_array[:, :8]
+            instruction_data=instLast_data.copy()
             top.update()
             
             
@@ -475,10 +500,12 @@ class RootWindow:
             print('model_filename', model_filename)
             
             # Initialize the buffer
+            num_columns_nf = 8
             buffer_size_seconds = 5
             samples_per_second = 250 
             buffer_size_samples = buffer_size_seconds * samples_per_second
             buffer = np.zeros((buffer_size_samples, 8))  # 8 is the number of EEG channels
+            filter_states = [None] * num_columns_nf
             face_alpha_values = [0,70,128,204,255] 
             face_alpha_index=2
             current_directory = os.getcwd()
@@ -492,6 +519,7 @@ class RootWindow:
                 selected_columns = ['Fz', 'C3', 'Cz', 'C4', 'Pz', 'Po7', 'Oz', 'Po8']
                 tdata=[]
                 lable=[]
+                filter_states = [None] * num_columns_nf
                 
                 if j==0:
                     image_window.display_gray_image()
@@ -508,23 +536,26 @@ class RootWindow:
                         
                         raw.append(Last_data)
                       
-                        
                         label_array = np.zeros((250, 4), dtype=object) 
                         label_array.fill('G')
                         lable.append(label_array)
                         nplable=np.array(lable).reshape(-1, 4)
                         fal = np.concatenate((new_totdata_array, nplable), axis=1)
+                    
+                    buffer = np.append(buffer, Last_data, axis=0)
+                    if buffer.shape[0] > buffer_size_samples:
+                        num_extra_samples = buffer.shape[0] - buffer_size_samples
+                        buffer = buffer[num_extra_samples:, :]
+                    else:
+                        buffer = Last_data[-buffer_size_samples:, :]  
+                    
                     del tdata
                     final_lable_array.append(fal)
                     fl=np.array(final_lable_array).reshape(-1, 21)
                     
                     grey=Last_data.copy()
                     
-                    buffer = np.append(buffer, Last_data[-250:, :], axis=0)
-                    if buffer.shape[0] > buffer_size_samples:
-                        num_extra_samples = buffer.shape[0] - buffer_size_samples
-                        buffer = buffer[num_extra_samples:, :]
-                    
+
                 elif j==1:
                     image_window.display_black_image_with_cross()
                     for n in range(0,2): #looking at each image for 5 seconds
@@ -543,25 +574,64 @@ class RootWindow:
                         lable.append(label_array)
                         nplable=np.array(lable).reshape(-1, 4)
                         fal = np.concatenate((new_totdata_array, nplable), axis=1)
+
+                    buffer = np.append(buffer, Last_data, axis=0)
+                    if buffer.shape[0] > buffer_size_samples:
+                        num_extra_samples = buffer.shape[0] - buffer_size_samples
+                        buffer = buffer[num_extra_samples:, :]
+                    else:
+                        buffer = Last_data[-buffer_size_samples:, :]  
+                    
                     del tdata
 
                     black=Last_data.copy()
                     print('black', black.shape)
                     
-                    
-                    base=np.vstack((grey, black))
+                    base=np.vstack((pw_data_2, instruction_data, grey, black))
                     print('base', base.shape)
+                    
+                    
+                   
+                    # plt.figure(figsize=(10, 6)) 
+                    # for col in buffer.columns: 
+                    #     plt.plot(buffer[col], label=col)
+                    # plt.xlabel('Sample Time')
+                    # plt.ylabel('Values')
+                    # plt.title(f'buffer_data={j}_n={n}')
+                    # plt.legend()
+                    # plt.savefig(f'buffer_0.png')
+
+                    
                     # base_np=np.array(base)
                     # print('base_np',  base_np.shape, base_np)
-                    num_columns_nf = 8
-                    base_bp=np.copy(base)
+                    
+                    
+                    
 
                     # Baseline processing
+                    # for column in range(num_columns_nf):
+                    #     base_bp[:, column]= self.butter_bandpass_filter_base(
+                    #         base_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5)
+                    # base_bp = pd.DataFrame(base_bp)
+                    base_bp=np.copy(base)
+                    num_columns_nf = buffer.shape[1]
                     for column in range(num_columns_nf):
-                        base_bp[:, column]= self.butter_bandpass_filter_base(
-                            base_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5)
+                        base_bp[:, column], filter_states[column] = self.butter_bandpass_filter(
+                            base_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5, initial_state=filter_states[column])
                     base_bp = pd.DataFrame(base_bp)
-                        
+                    
+                    
+                    plt.figure(figsize=(10, 6)) 
+                    for col in base_bp .columns: 
+                        plt.plot(base_bp [col], label=col)
+                    plt.xlabel('Sample Time')
+                    plt.ylabel('Values')
+                    plt.title(f'bp={j}_n={n}')
+                    plt.legend()
+                    plt.savefig(f'base_bp_j={j}_n={n}.png')
+
+                    
+   
                     # 2. Artifact rejection
                     base_artifact_RJ = base_bp.copy()
                     for channel in range (8):
@@ -571,19 +641,24 @@ class RootWindow:
                     base_artifact_RJ.columns = selected_columns
                     base_df_denoised = self.preprocess(pd.DataFrame(base_artifact_RJ), col_names=selected_columns, n_clusters=[50]*len(selected_columns)) 
                     print('base_df_denoised', base_df_denoised.shape) 
-                    base_mean=np.mean(base_df_denoised, axis=0)
+                    
+                    base_split=base_df_denoised.iloc[-1750:,]
+                    print('base_split.shape', base_split.shape)
+                    base_mean=np.mean(base_split, axis=0)
                     print('base_mean', type(base_mean), base_mean.shape, base_mean)
-
+                    
+                    b_int=np.copy(buffer)
+                    num_columns_nf = buffer.shape[1]
+                    
+                    # for column in range(num_columns_nf):
+                    #        b_int[:, column], filter_states[column] = self.butter_bandpass_filter(
+                    #            b_int[:, column], lowcut=.4, highcut=40, fs=250, order=5, initial_state=filter_states[column])
+                    # base_bp = pd.DataFrame(base_bp)
 
                     final_lable_array.append(fal)
                     final_lable_array_np = np.concatenate(final_lable_array, axis=0) if final_lable_array else np.empty((0, 21))
                     print('final_lable_array_np.shape', final_lable_array_np.shape)
                     fl=np.array(final_lable_array_np).reshape(-1, 21)
-
-                    buffer = np.append(buffer, Last_data[-250:, :], axis=0)
-                    if buffer.shape[0] > buffer_size_samples:
-                        num_extra_samples = buffer.shape[0] - buffer_size_samples
-                        buffer = buffer[num_extra_samples:, :]
 
                 else:
                     image_window.start_new_trial()
@@ -599,6 +674,7 @@ class RootWindow:
                         Last_data=new_totdata_array[:, :8]
                         raw.append(Last_data)
 
+
                         buffer = np.append(buffer, Last_data[-250:, :], axis=0)
                         if buffer.shape[0] > buffer_size_samples:
                             num_extra_samples = buffer.shape[0] - buffer_size_samples
@@ -607,11 +683,24 @@ class RootWindow:
                         Combined_raw_eeg_nf_bp = np.copy(buffer)
                         
                         num_columns_nf = buffer.shape[1]
-                        filter_states = [None] * num_columns_nf  # Initialize a list to hold states for each column
+                        
+
                         for column in range(num_columns_nf):
                             Combined_raw_eeg_nf_bp[:, column], filter_states[column] = self.butter_bandpass_filter(
                                 Combined_raw_eeg_nf_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5, initial_state=filter_states[column])
                         combined_raw_eeg_nf_bp = pd.DataFrame(Combined_raw_eeg_nf_bp)
+                        
+                        
+                        plt.figure(figsize=(10, 6)) 
+                        for col in combined_raw_eeg_nf_bp .columns: 
+                            plt.plot(combined_raw_eeg_nf_bp [col], label=col)
+                        plt.xlabel('Sample Time')
+                        plt.ylabel('Values')
+                        plt.title(f'bp={j}_n={n}')
+                        plt.legend()
+                        plt.savefig(f'bp_j={j}_n={n}.png')
+                        
+                        
                         
                         # 2. Artifact rejection
                         BP_artifact_RJ = combined_raw_eeg_nf_bp.copy()
@@ -626,6 +715,25 @@ class RootWindow:
                         print('eeg_df_denoised', type(eeg_df_denoised), eeg_df_denoised.shape)
                         eeg_base_corrected=eeg_df_denoised.subtract(base_mean, axis=1)
                         print('eeg_base_corrected', eeg_base_corrected.shape)
+                        
+                        
+                            
+                        denoised=pd.DataFrame(eeg_df_denoised)
+                        print('denoised',denoised.shape)
+                        # eeg_base_corrected.to_csv(f"bufferdn_{j}_{n}.csv", index=False)
+
+
+                        # plt.figure(figsize=(10, 6)) 
+                        # for col in denoised .columns: 
+                        #     plt.plot(denoised [col], label=col)
+                        # plt.xlabel('Sample Time')
+                        # plt.ylabel('Values')
+                        # plt.title(f'bp={j}_n={n}')
+                        # plt.legend()
+                        # plt.savefig(f'dn_j={j}_n={n}.png')
+
+                        
+                        
                         
                         chunks = np.array_split(eeg_base_corrected.to_numpy(), 5, axis=0)                    
                         eeg_signal = chunks[4].reshape(8, 250)  # reshaped to (8, 250)
