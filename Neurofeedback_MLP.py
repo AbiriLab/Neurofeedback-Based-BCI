@@ -449,7 +449,7 @@ class RootWindow:
         
             image_window.pleaseWait_image()
             pw1=[]
-            for pw in range(0, 1):
+            for pw in range(0, 15):
                 for p in range(0, 2*self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)         
                     dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
@@ -461,7 +461,7 @@ class RootWindow:
             pw_data_1=pw1_data.copy()
             
             pw2=[]
-            for pw in range(0, 1):
+            for pw in range(0, 60):
                 for p in range(0, self.numberOfGetDataCalls): 
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
                     dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
@@ -621,14 +621,14 @@ class RootWindow:
                     base_bp = pd.DataFrame(base_bp)
                     
                     
-                    plt.figure(figsize=(10, 6)) 
-                    for col in base_bp .columns: 
-                        plt.plot(base_bp [col], label=col)
-                    plt.xlabel('Sample Time')
-                    plt.ylabel('Values')
-                    plt.title(f'bp={j}_n={n}')
-                    plt.legend()
-                    plt.savefig(f'base_bp_j={j}_n={n}.png')
+                    # plt.figure(figsize=(10, 6)) 
+                    # # for col in base_bp .columns: 
+                    # #     plt.plot(base_bp [col], label=col)
+                    # # plt.xlabel('Sample Time')
+                    # # plt.ylabel('Values')
+                    # # plt.title(f'bp={j}_n={n}')
+                    # # plt.legend()
+                    # # plt.savefig(f'base_bp_j={j}_n={n}.png')
 
                     
    
@@ -642,7 +642,9 @@ class RootWindow:
                     base_df_denoised = self.preprocess(pd.DataFrame(base_artifact_RJ), col_names=selected_columns, n_clusters=[50]*len(selected_columns)) 
                     print('base_df_denoised', base_df_denoised.shape) 
                     
-                    base_split=base_df_denoised.iloc[-1750:,]
+                    base_split=base_df_denoised.iloc[
+                                                     
+                                                     :,]
                     print('base_split.shape', base_split.shape)
                     base_mean=np.mean(base_split, axis=0)
                     print('base_mean', type(base_mean), base_mean.shape, base_mean)

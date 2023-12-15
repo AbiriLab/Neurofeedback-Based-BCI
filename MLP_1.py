@@ -38,6 +38,16 @@ import optuna
 from sklearn.datasets import make_classification
 from PIL import Image, ImageDraw, ImageFont
 from joblib import dump
+from scipy.signal import butter, filtfilt, lfilter, lfilter_zi
+
+
+
+
+
+
+#####################################################################################
+selected_columns = ['Fz', 'C3', 'Cz', 'C4', 'Pz', 'Po7', 'Oz', 'Po8']
+fs=250
 
 ####################################################################################
 def butter_bandpass(lowcut, highcut, fs, order=5):
@@ -83,8 +93,6 @@ def custom_detrend(df, col_names):
 def preprocess(df, col_names, n_clusters):
     df_new = df.copy()
     df_new = denoise_data(df, col_names, n_clusters)
-    # df_new = z_score(df_new, col_names)
-    # df_new = custom_detrend(df_new, col_names)
     return df_new
 
 def df_to_raw(df, sfreq=250):
@@ -100,8 +108,8 @@ def reject_artifacts(df, channel):
     x = np.arange(len(df[channel]))
     cs = CubicSpline(x[~spikes], df[channel][~spikes]) # Interpolate using Cubic Spline
     interpolated_values = cs(x)
-    interpolated_values[spikes] *= 0.01  # Make interpolated values 0.1 times smaller
-    # Check each interpolated value's difference from median and compare to the threshold
+    interpolated_values[spikes] *= 0.01  # Make interpolated values 0.01 times smaller
+    # Again Check each interpolated value's difference from median and compare to the threshold
     spike_values = np.abs(interpolated_values - median) > threshold_factor * mad
     interpolated_values[spike_values] *= 0.01 
     spike_values = np.abs(interpolated_values - median) > threshold_factor * mad
@@ -133,7 +141,6 @@ elif phase == 2:
     folders_to_use = [sub_folders[2]]  # 
 print('folders_to_use:', folders_to_use)
 # Iterate over each folder to read the csv files
-selected_columns = ['Fz', 'FC1', 'FC2', 'C3', 'Cz', 'C4', 'CPz', 'Pz']
 
 ################################################################################################
 duration = 40 
@@ -164,7 +171,7 @@ for folder in folders_to_use:
                 raw_bp = np.copy(df_temp)
                 for column in range(8):
                     raw_bp[:, column] = butter_bandpass_filter(raw_bp[:, column], lowcut=.4, highcut=40, fs=250) 
-                # print(raw_bp.shape)
+                # print('raw_bp.shape', raw_bp.shape)
                 
                 # 2. Artifact rejection
                 BP_artifact_RJ = np.copy(raw_bp)
@@ -174,9 +181,10 @@ for folder in folders_to_use:
                 # 4. Denoising and other preprocessing
                 BP_artifact_RJ.columns = selected_columns
                 eeg_df_denoised = preprocess(pd.DataFrame(BP_artifact_RJ), col_names=selected_columns, n_clusters=[10]*len(selected_columns))
-                baseline=eeg_df_denoised.iloc[1250:1750,]
+                # I preprocessed the whole data in each block, then, split it to the base and the activity signal
+                baseline=eeg_df_denoised.iloc[:1750,]
                 dd=eeg_df_denoised.iloc[1750:,]
-                print(dd.shape)
+                print('eeg_df_denoised.shape',dd.shape)
                 # eeg_df_denoised.plot(subplots=True, figsize=(15, 10), title='Denoised EEG Data')
                 # plt.show()
                 B.append(baseline)
@@ -185,7 +193,6 @@ for folder in folders_to_use:
         print(f"{full_folder_path_} does not exist")
 
 #######################################################################################################################################################
-
 # Define the new list to store baseline corrected data
 baseline_corrected = []
 for baseline, dd in zip(B, PP):
@@ -201,7 +208,6 @@ print('event_np.shape',event_np.shape)
 label_np=event_np[:,1750:]
 print('label_np.shape',label_np.shape)
 
-fs=250
 B_N=int(len(baseline_corrected)) #Number of blocks
 PP_NP=baseline_corrected_np #shape: (B_N, 10000, 8=Channel Numbers)
 
@@ -210,13 +216,12 @@ print('EVENTS', EVENTS)
 denoised=PP_NP.reshape(B_N*(baseline_corrected_np.shape[1]), 8) # seprate each blocks' signal 
 pp_sig_event=np.concatenate((denoised,EVENTS), axis=1) 
 
-
 event_column_index = pp_sig_event.shape[1] - 1
 
 # Create a boolean mask where the event is not 'n'
 mask = pp_sig_event[:, event_column_index] != 'N'
 
-# Apply the mask to filter out rows with event 'n'
+# Apply the mask to filter out rows with event 'n', because our focus is on the correct attention
 pp_sig_event_filtered = pp_sig_event[mask]
 pp_sig_event_no_event_column = pp_sig_event_filtered[:, :-1]
 
@@ -239,65 +244,68 @@ scene = np.array(scene)
 print('scene.shape', scene.shape)
 labels=np.array(labels) 
 print('label.shape', labels.shape, labels)
+
 ###############################################################################################################
-# Human_Behavior_np=np.array(Human_Behavior).reshape(B_N*(baseline_corrected_np.shape[1]), 4)
-# denoised_im_ins_HB = np.concatenate((denoised, Human_Behavior_np), axis=1)
-
-# SCORE = []
-# for row in denoised_im_ins_HB:
-#     condition1 = (row[-4] == row[-3]) or (row[-4] == row[-2])
-#     condition2 = row[-1] == 1
-#     condition3 = (row[-4] != row[-3]) and (row[-4] != row[-2])
-#     condition4 = row[-1] == 0
-#     if (condition1 and condition2) or (condition3 and condition4):
-#         SCORE.append([1])
-#     else:
-#         SCORE.append([0])
-
-# print('score length', len(SCORE))
-# #score
-# win_size = 250
-# S = []
-# for i in range(0, len(SCORE), win_size):
-#     S_data = SCORE[i:i+win_size]
-#     S.append(S_data)
-# # print('s lenght', len(S))
-# # print(S)
-# S_np = np.array(S)
-# print('S_np shape', S_np.shape)
-# result_list = []
-
-# # Iterate through the "images" (first dimension)
-# for i in range(S_np.shape[0]):
-#     # Check if all 250 samples are 0
-#     if np.all(S_np[i, :, 0] == 0):
-#         result_list.append(0)
-#     else:
-#         result_list.append(1)
-# # print(result_list)
-# mean_value = sum(result_list) / len(result_list)
-# print("Mean of result list:", mean_value)
-# percentage_of_ones = mean_value * 100
-# rounded_percentage_of_ones = round(percentage_of_ones)
-# n=str(rounded_percentage_of_ones)
-# print('n', n)
-# img=Image.new('RGB', (1000,1000), color=(73,109,137))
-# d=ImageDraw.Draw(img)
-# font_0=ImageFont.truetype("arial.ttf", 500)
-# font_1=ImageFont.truetype("arial.ttf", 150)
-# d.text((150,50), "Your Score", font=font_1, fill=(255,255,0))
-# d.text((250,250), n, font=font_0, fill=(255,255,0))
-# img_file_name = f"Score.png"
-# img_file_path = os.path.join(full_folder_path_, img_file_name) 
-# img.save(img_file_path, index=False)
-
+# Score
+if phase !=  1:
+    Human_Behavior_np=np.array(Human_Behavior).reshape(B_N*(baseline_corrected_np.shape[1]), 4)
+    denoised_im_ins_HB = np.concatenate((denoised, Human_Behavior_np), axis=1)
+    SCORE = []
+    for row in denoised_im_ins_HB:
+        condition1 = (row[-4] == row[-3]) or (row[-4] == row[-2])
+        condition2 = row[-1] == 1
+        condition3 = (row[-4] != row[-3]) and (row[-4] != row[-2])
+        condition4 = row[-1] == 0
+        if (condition1 and condition2) or (condition3 and condition4):
+            SCORE.append([1])
+        else:
+            SCORE.append([0])
+    print('score length', len(SCORE))
+    #score
+    win_size = 250
+    S = []
+    for i in range(0, len(SCORE), win_size):
+        S_data = SCORE[i:i+win_size]
+        S.append(S_data)
+    # print('s lenght', len(S))
+    # print(S)
+    S_np = np.array(S)
+    print('S_np shape', S_np.shape)
+    result_list = []
+    # Iterate through the "images" (first dimension)
+    for i in range(S_np.shape[0]):
+        # Check if all 250 samples are 0
+        if np.all(S_np[i, :, 0] == 0):
+            result_list.append(0)
+        else:
+            result_list.append(1)
+    # print(result_list)
+    mean_value = sum(result_list) / len(result_list)
+    print("Mean of result list:", mean_value)
+    percentage_of_ones = mean_value * 100
+    rounded_percentage_of_ones = round(percentage_of_ones)
+    n=str(rounded_percentage_of_ones)
+    print('n', n)
+    img=Image.new('RGB', (1000,1000), color=(73,109,137))
+    d=ImageDraw.Draw(img)
+    font_0=ImageFont.truetype("arial.ttf", 500)
+    font_1=ImageFont.truetype("arial.ttf", 150)
+    d.text((150,50), "Your Score", font=font_1, fill=(255,255,0))
+    d.text((250,250), n, font=font_0, fill=(255,255,0))
+    img_file_name = f"Score.png"
+    img_file_path = os.path.join(full_folder_path_, img_file_name) 
+    print('img_file_path', img_file_path)
+    img.save(img_file_path, index=False)
+else:
+    print(f"No score in phase_{phase}")
+    
 ################################################################################################################
+#Input to the classifier
 label=labels.reshape(int(labels.shape[0]/fs), fs)
 Y=np.squeeze(label[:,0])
 print('Y.shape', Y.shape)
 denoised_reshaped = pp_sig_event_no_event_column.reshape(int(pp_sig_event_no_event_column.shape[0]/250), 250, 8)
 print('denoised_reshaped.shape',denoised_reshaped.shape)
-
 
 mlp_data=denoised_reshaped.reshape(denoised_reshaped.shape[0], denoised_reshaped.shape[1]*denoised_reshaped.shape[2])
 print('mlp_data.shape', mlp_data.shape)
@@ -307,67 +315,66 @@ Y_mlp=np.squeeze(label[:,0])
 print(af_mlp.shape, Y_mlp.shape)
 af_mlp, Y_mlp= shuffle(af_mlp, Y_mlp)
 print(af_mlp.shape, Y_mlp.shape)
+
 # Balance the dataset
 oversampler = RandomOverSampler(sampling_strategy='auto', random_state=42)
 X_resampled_mlp, y_resampled_mlp = oversampler.fit_resample(af_mlp, Y_mlp)
 X_resampled_mlp= X_resampled_mlp.astype(np.float32)
 y_resampled_mlp = y_resampled_mlp.astype(np.int32)
 
+
+print('X_resampled_mlp.shape', X_resampled_mlp.shape)
 #Split to train and test
 X_train, X_test, y_train, y_test = train_test_split(X_resampled_mlp,y_resampled_mlp, test_size=0.1, random_state=42)
-
 #Split to train and validation
 X_train_mlp, X_validation_mlp, y_train_mlp, y_validation_mlp = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
 
 ########################################################################################################################################
-def objective(trial):
-    # Layers and neurons
-    n_layers = trial.suggest_int('n_layers', 1,3)
-    layers = []
-    for i in range(n_layers):
-        layers.append(trial.suggest_int(f'n_units_layer{i}', 16,  512))
-    
-    # Activation function
-    activation = trial.suggest_categorical('activation', ['relu', 'logistic', 'tanh', 'identity'])
-    
-    # Learning rate
-    learning_rate_init = trial.suggest_float('learning_rate_init', 1e-4,  1e-1, log=True)
-    
-    max_iter = trial.suggest_int('max_iter', 50, 1000)
+# def objective(trial):
+#     # Layers and neurons
+#     n_layers = trial.suggest_int('n_layers', 1,3)
+#     layers = []
+#     for i in range(n_layers):
+#         layers.append(trial.suggest_int(f'n_units_layer{i}',4, 8))
+#     # Activation function
+#     activation = trial.suggest_categorical('activation', ['relu', 'logistic', 'tanh', 'identity'])
+#     # Learning rate
+#     learning_rate_init = trial.suggest_float('learning_rate_init', 1e-4,  1e-1, log=True)
+#     max_iter = trial.suggest_int('max_iter', 50, 1000)
+#     model = MLPClassifier(hidden_layer_sizes=tuple(layers), 
+#                           activation=activation, 
+#                           learning_rate_init=learning_rate_init,
+#                           max_iter=max_iter ,  # to ensure convergence in most cases
+#                           random_state=42)
+#     model.fit(X_train_mlp, y_train_mlp)
+#     # Evaluate
+#     predictions = model.predict(X_validation_mlp)
+#     accuracy = accuracy_score(y_validation_mlp, predictions)
+#     return accuracy
+# study = optuna.create_study(direction='maximize')
+# study.optimize(objective, n_trials=30)
 
-    model = MLPClassifier(hidden_layer_sizes=tuple(layers), 
-                          activation=activation, 
-                          learning_rate_init=learning_rate_init,
-                          max_iter=max_iter ,  # to ensure convergence in most cases
-                          random_state=42)
-
-    model.fit(X_train_mlp, y_train_mlp)
-
-    # Evaluate
-    predictions = model.predict(X_validation_mlp)
-    accuracy = accuracy_score(y_validation_mlp, predictions)
-    return accuracy
-
-study = optuna.create_study(direction='maximize')
-study.optimize(objective, n_trials=10)
-
-print('Number of finished trials: ', len(study.trials))
-print('Best trial:')
-trial = study.best_trial
-print('  Value: ', trial.value)
-print('  Params: ')
-for key, value in trial.params.items():
-    print(f'    {key}: {value}')
+# print('Number of finished trials: ', len(study.trials))
+# print('Best trial:')
+# trial = study.best_trial
+# print('  Value: ', trial.value)
+# print('  Params: ')
+# for key, value in trial.params.items():
+#     print(f'    {key}: {value}')
 
 ###################################################################################################################
 # Extract the best parameters
-best_params = study.best_params
+best_params = {'n_layers': 1,
+    'n_units_layer0': 8,
+    'activation': 'logistic',
+    'learning_rate_init': 0.0015387775112353102,
+    'max_iter': 995}
 # Extract individual parameters
-n_layers = best_params['n_layers']
-layers = [best_params[f'n_units_layer{i}'] for i in range(n_layers)]
+n_layers = 1
+layers = [best_params[f'n_units_layer{i}'] for i in range(1)]
 activation = best_params['activation']
-learning_rate_init = best_params['learning_rate_init']
-max_iter = best_params['max_iter']
+learning_rate_init = 0.0015387775112353102
+max_iter = 995
 # Create the model using the best parameters
 best_model = MLPClassifier(hidden_layer_sizes=tuple(layers), 
                            activation=activation, 
@@ -378,6 +385,7 @@ best_model = MLPClassifier(hidden_layer_sizes=tuple(layers),
 best_model.fit(X_train, y_train)
 # Predict using the test data
 predictions = best_model.predict(X_test)
+
 # Predict using the training data
 train_predictions = best_model.predict(X_train)
 # Evaluate the model using training data
