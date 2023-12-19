@@ -111,7 +111,7 @@ class DisplayImagenf:
         cross_img = self.create_black_image_with_cross(*composite_img.size)
         composite_img_with_cross = ImageChops.lighter(composite_img_rgb, cross_img)
     
-        return composite_img_with_cross
+        return composite_img_rgb
 
     def update_transparency(self, face_alpha):
         # Create a new composite image with the updated transparency

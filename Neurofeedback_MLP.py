@@ -461,7 +461,7 @@ class RootWindow:
             pw_data_1=pw1_data.copy()
             
             pw2=[]
-            for pw in range(0, 60):
+            for pw in range(0, 30):
                 for p in range(0, self.numberOfGetDataCalls): 
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
                     dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
@@ -802,7 +802,7 @@ class RootWindow:
             
             tpw_0=[]
             image_window.pleaseWait_image()
-            for pw in range(0, 60):
+            for pw in range(0, 15):
                 for p in range(0, 2*self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
                     pw_0 = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
@@ -820,7 +820,7 @@ class RootWindow:
             del tpw_np_0  
             
             tpw=[]
-            for pw2 in range(0, 60):
+            for pw2 in range(0, 30):
                 for p in range(0, self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
                     pw = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
@@ -872,12 +872,12 @@ class RootWindow:
                 tdata=[]
                 root.update()
                 
-                for j in range (0,42):
+                for j in range (0,41):
                     row_data = excel_file_lable.iloc[j,[1, 2, 3]].to_numpy()
                     print('row_data', row_data)
                     image_window.next_image()  
                     if j==0:
-                        for i in range(0, 5*self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
+                        for i in range(0, 7*self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
                             device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
                             key_pressed = self.key_detector.check_key_press()
                             # Convert receive buffer to numpy float array 
@@ -898,27 +898,27 @@ class RootWindow:
                             for row in tdataarray:
                                 writer.writerow(row)
 
-                    elif j==1:
-                        for i in range(0, 2*self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
-                            device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
-                            key_pressed = self.key_detector.check_key_press()
-                            # Convert receive buffer to numpy float array 
-                            dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
-                            data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength,
-                            combined_data = np.concatenate((data, row_data))
-                            combined_data = np.concatenate((combined_data,[key_pressed]))
-                            tdata.append(combined_data)
-                            tdataarray = np.array(tdata)    
+                    # elif j==1:
+                    #     for i in range(0, 2*self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
+                    #         device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
+                    #         key_pressed = self.key_detector.check_key_press()
+                    #         # Convert receive buffer to numpy float array 
+                    #         dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
+                    #         data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength,
+                    #         combined_data = np.concatenate((data, row_data))
+                    #         combined_data = np.concatenate((combined_data,[key_pressed]))
+                    #         tdata.append(combined_data)
+                    #         tdataarray = np.array(tdata)    
 
-                        csv_filename = f'raw_eeg_block_{self.block}_{seq_list[self.block]}.csv'
-                        if self.curr_phase.get() == "Pre-Evaluation":  
-                            csv_filepath = os.path.join(pre_folder, csv_filename)
-                        if self.curr_phase.get() == "Post-Evaluation":  
-                            csv_filepath = os.path.join(post_folder, csv_filename)
-                        with open(csv_filepath, 'w', newline='') as csvfile:
-                            writer = csv.writer(csvfile)
-                            for row in tdataarray:
-                                writer.writerow(row)
+                    #     csv_filename = f'raw_eeg_block_{self.block}_{seq_list[self.block]}.csv'
+                    #     if self.curr_phase.get() == "Pre-Evaluation":  
+                    #         csv_filepath = os.path.join(pre_folder, csv_filename)
+                    #     if self.curr_phase.get() == "Post-Evaluation":  
+                    #         csv_filepath = os.path.join(post_folder, csv_filename)
+                    #     with open(csv_filepath, 'w', newline='') as csvfile:
+                    #         writer = csv.writer(csvfile)
+                    #         for row in tdataarray:
+                    #             writer.writerow(row)
                     else:
                         for i in range(0, self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
                             device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
