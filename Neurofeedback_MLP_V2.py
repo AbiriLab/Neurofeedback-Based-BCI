@@ -449,7 +449,7 @@ class RootWindow:
         
             image_window.pleaseWait_image()
             pw1=[]
-            for pw in range(0, 15):
+            for pw in range(0, 1):
                 for p in range(0, 2*self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)         
                     dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
@@ -461,7 +461,7 @@ class RootWindow:
             pw_data_1=pw1_data.copy()
             
             pw2=[]
-            for pw in range(0, 30):
+            for pw in range(0, 1):
                 for p in range(0, self.numberOfGetDataCalls): 
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
                     dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
@@ -513,34 +513,34 @@ class RootWindow:
 
             final_lable_array=[]
             raw=[]
-            raw_g=[]
             PP=[]
             base=[]
             for j in range (0,8):
                 selected_columns = ['Fz', 'C3', 'Cz', 'C4', 'Pz', 'Po7', 'Oz', 'Po8']
                 tdata=[]
-                tdata_g=[]
                 lable=[]
-                lable_g=[]
                 filter_states = [None] * num_columns_nf
                 print('j=', j)
+                
                 if j==0:
                     image_window.display_gray_image()
                     for n in range(0,7): 
                         print('n', n)
                         for i in range(self.numberOfGetDataCalls): 
                             device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
-                            dataa_g = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
-                            data_g = np.reshape(dataa_g, (self.numberOfAcquiredChannels)) #self.FrameLength
-                            tdata_g.append(data_g.copy())
-                            tdataarray_g=np.array(tdata_g)    
-                        new_totdata_array_g = tdataarray_g.reshape(-1, 17) 
-                        Last_data_g=new_totdata_array_g[:, :8]
-                        raw_g.append(Last_data_g)
+                            dataa= np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
+                            data=np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength
+                            tdata.append(data.copy())
+                            
+                            tdataarray=np.array(tdata)    
+                        new_totdata_array= tdataarray.reshape(-1, 17) 
+                        Last_data=new_totdata_array[:, :8]
+                        raw.append(Last_data)
                       
-                        label_array_g = np.zeros((250, 4), dtype=object) 
-                        label_array_g.fill('G')
-                        lable_g.append(label_array_g)
+                        label_array= np.zeros((250, 4), dtype=object) 
+                        label_array.fill('G')
+                        lable.append(label_array)
+                        
                         nplable=np.array(lable).reshape(-1, 4)
                         fal = np.concatenate((new_totdata_array, nplable), axis=1)
                     
@@ -552,6 +552,7 @@ class RootWindow:
                         buffer = Last_data[-buffer_size_samples:, :]  
                     
                     del tdata
+                    
                     final_lable_array.append(fal)
                     fl=np.array(final_lable_array).reshape(-1, 21)
                     
@@ -586,10 +587,10 @@ class RootWindow:
                     num_columns_nf = buffer.shape[1]
                     
          
-                    final_lable_array.append(fal)
-                    final_lable_array_np = np.concatenate(final_lable_array, axis=0) if final_lable_array else np.empty((0, 21))
-                    # print('final_lable_array_np.shape', final_lable_array_np.shape)
-                    fl=np.array(final_lable_array_np).reshape(-1, 21)
+                    # final_lable_array.append(fal)
+                    # final_lable_array_np = np.concatenate(final_lable_array, axis=0) if final_lable_array else np.empty((0, 21))
+                    # # print('final_lable_array_np.shape', final_lable_array_np.shape)
+                    # fl=np.array(final_lable_array_np).reshape(-1, 21)
 
                 else:
                     image_window.start_new_trial()
@@ -600,10 +601,13 @@ class RootWindow:
                             dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
                             data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength
                             tdata.append(data.copy())
-                            tdataarray=np.array(tdata)    
+                            tdataarray=np.array(tdata)
+                                
                         new_totdata_array = tdataarray.reshape(-1, 17) 
                         Last_data=new_totdata_array[:, :8]
                         raw.append(Last_data)
+                        
+
 
                         buffer = np.append(buffer, Last_data[-250:, :], axis=0)
                         if buffer.shape[0] > buffer_size_samples:
@@ -611,10 +615,8 @@ class RootWindow:
                             buffer = buffer[num_extra_samples:, :]
                         df = pd.DataFrame(buffer)
                         Combined_raw_eeg_nf_bp = np.copy(buffer)
-                        
                         num_columns_nf = buffer.shape[1]
                         
-
                         for column in range(num_columns_nf):
                             Combined_raw_eeg_nf_bp[:, column], filter_states[column] = self.butter_bandpass_filter(
                                 Combined_raw_eeg_nf_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5, initial_state=filter_states[column])
@@ -675,29 +677,35 @@ class RootWindow:
                         fal = np.concatenate((new_totdata_array, nplable), axis=1)
                         # print('nplable', nplable.shape)
                    
-                    tdata_r=[]
-                    lable_r=[]
+
                     image_window.display_gray_image()
                     for n in range(0,3): #looking at each image for 5 seconds
                         print('n', n)
                         for i in range(self.numberOfGetDataCalls): 
                             device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
-                            dataa_r = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
-                            data_r = np.reshape(dataa_r, (self.numberOfAcquiredChannels)) #self.FrameLength
-                            tdata_r.append(data_r.copy())
-                            tdataarray_r=np.array(tdata_r)    
-                        new_totdata_array_r = tdataarray_r.reshape(-1, 17)
-                        label_r = np.zeros((250, 4), dtype=object) 
-                        label_r.fill('r') 
-                        lable_r.append(label_r)
-                        nplable_r=np.array(lable_r).reshape(-1, 4)
-                        rest = np.concatenate((new_totdata_array_r, nplable_r), axis=1)
-                    fal_f=np.vstack((fal, rest ))
+                            dataa= np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
+                            data= np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength
+                            tdata.append(data.copy())
+                            tdataarray=np.array(tdata)
+                                
+                        new_totdata_array = tdataarray.reshape(-1, 17)
+         
+                        
+                        label= np.zeros((250, 4), dtype=object) 
+                        label.fill('r') 
+                        lable.append(label)
+                        nplable=np.array(lable).reshape(-1, 4)
                     
-                    del tdata
-                    final_lable_array.append(fal_f)                   
+                    print('tdata', len(tdata), 'new_totdata_array.shape', 'j=', j,  new_totdata_array.shape)    
+
+                    fal = np.concatenate((new_totdata_array, nplable), axis=1)
                     
+                    # fal_f=np.vstack((fal, rest ))
+                    
+                    # del tdata
+                    final_lable_array.append(fal)                   
                     final_lable_array_np = np.concatenate(final_lable_array, axis=0) if final_lable_array else np.empty((0, 21))
+                    
                     # print('final_lable_array_np.shape', final_lable_array_np.shape)
                     fl=np.array(final_lable_array_np).reshape(-1, 21)
                     
