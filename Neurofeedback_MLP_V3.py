@@ -432,7 +432,6 @@ class RootWindow:
         pre_folder= os.path.join(patient_folder, "Pre Evaluation")
         post_folder= os.path.join(patient_folder, "Post Evaluation")
         neuro_folder= os.path.join(patient_folder, "Neurofeedback")
-        # frequency_bands = {'delta': (0.5, 4),'theta': (4, 8),'alpha': (8, 14),'beta': (14, 30),'gamma': (30, 40),'ERP':(0.4,40)}
         fs=250
       
         if not os.path.exists(patient_folder):
@@ -447,7 +446,6 @@ class RootWindow:
 
             device.StartAcquisition(False)
         
-            
             ############################################################################################################################################
             #please wait image
             image_window.pleaseWait_image()
@@ -468,7 +466,7 @@ class RootWindow:
             #instruction image
             image_window.instructions_image_nf()
             instdata=[]
-            for pw3 in range(0, 5):
+            for pw3 in range(0, 1):
                 for p in range(0, self.numberOfGetDataCalls): 
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
                     dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
@@ -497,7 +495,7 @@ class RootWindow:
             buffer_size_samples = buffer_size_seconds * samples_per_second
             buffer = np.zeros((buffer_size_samples, 8))  # 8 is the number of EEG channels
             filter_states = [None] * num_columns_nf
-            face_alpha_values = [0,70,128,204,255] 
+            face_alpha_values = [10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,210] 
             face_alpha_index=2
 
             #############################################################################################################################################
@@ -517,7 +515,7 @@ class RootWindow:
                 
                 if j==0:
                     image_window.display_gray_image()
-                    for n in range(0,7): 
+                    for n in range(0,1): 
                         print('n', n)
                         for i in range(self.numberOfGetDataCalls): 
                             device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
@@ -578,28 +576,25 @@ class RootWindow:
                     # b_int=np.copy(buffer)
                     num_columns_nf = buffer.shape[1]
 
-                    ########################################################################################################################################################
-                        
+                    ########################################################################################################################################################        
+                
                 else:
                     image_window.start_new_trial()
-                    for n in range(0,5): #looking at each image for 5 seconds
+                    for n in range(0,50): #looking at each image for 5 seconds
                         print('n', n)
-                        for i in range(self.numberOfGetDataCalls): 
+                        for i in range(25): #self.numberOfGetDataCalls
                             device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
                             dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
                             data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength
                             tdata.append(data.copy())
                             tdataarray=np.array(tdata)
                             
-                            
-                            
-                        
                         new_totdata_array = tdataarray.reshape(-1, 17) 
                         Last_data=new_totdata_array[:, :8]
                         raw.append(Last_data)
                         
                         ##########################################################################################################################################################
-                        buffer = np.append(buffer, Last_data[-250:, :], axis=0)
+                        buffer = np.append(buffer, Last_data[-25:, :], axis=0)
                         if buffer.shape[0] > buffer_size_samples:
                             num_extra_samples = buffer.shape[0] - buffer_size_samples
                             buffer = buffer[num_extra_samples:, :]
@@ -632,19 +627,11 @@ class RootWindow:
                         Xn=eeg_signal.reshape(-1,2000)
                         predictions =loaded_model.predict(Xn)
                         
-                        
                         instruction = self.instruction_mapping[seq_list[self.block]]
                         correct_prediction = (instruction == 'Face' and predictions[0] == 0) or (instruction == 'Scene' and predictions[0] == 1)
-                        label_array = np.zeros((250, 4), dtype=object) 
-                        label_array[:, 2] = 'F' if instruction == 'Face' else 'S'                    
-                        
-                        for row in range(label_array.shape[0]):
-                            if (instruction == 'Face' ):
-                                label_array[row, 0] = 'F'
-                            if (instruction == 'Scene'):
-                                label_array[row, 0] = 'S'
-                        label_array[:, 1] =label_array[:, 0]         
-                        label_array[:, 3] = 1       
+                        label_array = np.zeros((25, 4), dtype=object) 
+                        fill_value = 'F' if instruction == 'Face' else 'S'
+                        label_array.fill(fill_value)   
                         
                         # Adjust alpha
                         if instruction == 'Face':
@@ -659,7 +646,9 @@ class RootWindow:
                                 face_alpha_index = min(face_alpha_index + 1, len(face_alpha_values) - 1)
                         new_face_alpha=face_alpha_values[face_alpha_index]
                         
-                        image_window.update_transparency(new_face_alpha)
+                        
+                        if n>10:
+                            image_window.update_transparency(new_face_alpha)
                         
                         ##########################################################################################################################################
                         lable.append(label_array)
