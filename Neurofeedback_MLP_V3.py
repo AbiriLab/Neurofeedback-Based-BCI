@@ -432,7 +432,6 @@ class RootWindow:
         pre_folder= os.path.join(patient_folder, "Pre Evaluation")
         post_folder= os.path.join(patient_folder, "Post Evaluation")
         neuro_folder= os.path.join(patient_folder, "Neurofeedback")
-        # frequency_bands = {'delta': (0.5, 4),'theta': (4, 8),'alpha': (8, 14),'beta': (14, 30),'gamma': (30, 40),'ERP':(0.4,40)}
         fs=250
       
         if not os.path.exists(patient_folder):
@@ -447,6 +446,8 @@ class RootWindow:
 
             device.StartAcquisition(False)
         
+            ############################################################################################################################################
+            #please wait image
             image_window.pleaseWait_image()
             pw1=[]
             for pw in range(0, 1):
@@ -459,24 +460,13 @@ class RootWindow:
                 pw1_totdata_array = pw1dataarray.reshape(-1, 17) 
                 pw1_data=pw1_totdata_array[:, :8]
             pw_data_1=pw1_data.copy()
-            
-            pw2=[]
-            for pw in range(0, 1):
-                for p in range(0, self.numberOfGetDataCalls): 
-                    device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
-                    dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
-                    data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength
-                    pw2.append(data.copy())
-                    pw2dataarray=np.array(pw2)    
-                pw2_totdata_array = pw2dataarray.reshape(-1, 17) 
-                pw2_data=pw2_totdata_array[:, :8]
-            pw_data_2=pw2_data.copy()
 
 
-    
+            ##########################################################################################################################
+            #instruction image
             image_window.instructions_image_nf()
             instdata=[]
-            for pw3 in range(0, 5):
+            for pw3 in range(0, 1):
                 for p in range(0, self.numberOfGetDataCalls): 
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
                     dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
@@ -488,17 +478,16 @@ class RootWindow:
             instruction_data=instLast_data.copy()
             top.update()
             
-            
+            ##############################################################################################################################
+            #load the classifier
             print('self.block', self.block)
             Report_Number = self.block
             folder_name = patient_name
 
-            # Use an f-string to construct the file path
             model_filename  = fr'C:\Users\tnlab\OneDrive\Documents\GitHub\AlphaFold\Neurofeedback-Based-BCI\best_mlp_{Report_Number}_{folder_name}.joblib'
-            # model_filename = r'C:\Users\tnlab\OneDrive\Documents\GitHub\AlphaFold\Neurofeedback-Based-BCI\best_mlp_{Report_Number}_{folder_name}.joblib'
             loaded_model = joblib.load(model_filename)
-            print('model_filename', model_filename)
             
+            ##################################################################################################################################
             # Initialize the buffer
             num_columns_nf = 8
             buffer_size_seconds = 5
@@ -506,25 +495,27 @@ class RootWindow:
             buffer_size_samples = buffer_size_seconds * samples_per_second
             buffer = np.zeros((buffer_size_samples, 8))  # 8 is the number of EEG channels
             filter_states = [None] * num_columns_nf
-            face_alpha_values = [0,70,128,204,255] 
+            face_alpha_values = [10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,210] 
             face_alpha_index=2
-            current_directory = os.getcwd()
-            # print(f"Current directory: {current_directory}")
 
+            #############################################################################################################################################
             final_lable_array=[]
             raw=[]
-            PP=[]
             base=[]
-            for j in range (0,8):
+            
+            for j in range (0,9):
+                print('j=', j)
+                
                 selected_columns = ['Fz', 'C3', 'Cz', 'C4', 'Pz', 'Po7', 'Oz', 'Po8']
+                
                 tdata=[]
                 lable=[]
+                
                 filter_states = [None] * num_columns_nf
-                print('j=', j)
                 
                 if j==0:
                     image_window.display_gray_image()
-                    for n in range(0,7): 
+                    for n in range(0,1): 
                         print('n', n)
                         for i in range(self.numberOfGetDataCalls): 
                             device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
@@ -543,25 +534,27 @@ class RootWindow:
                         
                         nplable=np.array(lable).reshape(-1, 4)
                         fal = np.concatenate((new_totdata_array, nplable), axis=1)
+                    del tdata
                     
+                    final_lable_array.append(fal)
+                    fl=np.array(final_lable_array).reshape(-1, 21) # just for save as csv
+                    
+                    #############################################################################################################################################
+                    #buffer
                     buffer = np.append(buffer, Last_data, axis=0)
                     if buffer.shape[0] > buffer_size_samples:
                         num_extra_samples = buffer.shape[0] - buffer_size_samples
                         buffer = buffer[num_extra_samples:, :]
                     else:
                         buffer = Last_data[-buffer_size_samples:, :]  
-                    
-                    del tdata
-                    
-                    final_lable_array.append(fal)
-                    fl=np.array(final_lable_array).reshape(-1, 21)
-                    
+                        
+                    ################################################################################################################################################
                     grey=Last_data.copy()
                     
-                    base=np.vstack((pw_data_2, instruction_data, grey))
-                    # print('base', base.shape)
+                    base=np.vstack((pw_data_1, instruction_data, grey))
 
                     base_bp=np.copy(base)
+                    # 1. Bandpass
                     num_columns_nf = buffer.shape[1]
                     for column in range(num_columns_nf):
                         base_bp[:, column], filter_states[column] = self.butter_bandpass_filter(
@@ -573,43 +566,35 @@ class RootWindow:
                     for channel in range (8):
                         base_artifact_RJ= self.reject_artifacts(base_artifact_RJ, channel)     
                         
-                    # 4. Denoising and other preprocessing
+                    # 3. Denoising and other preprocessing
                     base_artifact_RJ.columns = selected_columns
                     base_df_denoised = self.preprocess(pd.DataFrame(base_artifact_RJ), col_names=selected_columns, n_clusters=[50]*len(selected_columns)) 
-                    # print('base_df_denoised', base_df_denoised.shape) 
                     
                     base_split=base_df_denoised.iloc[-1750:,]
-                    # print('base_split.shape', base_split.shape)
                     base_mean=np.mean(base_split, axis=0)
-                    # print('base_mean', type(base_mean), base_mean.shape, base_mean)
                     
-                    b_int=np.copy(buffer)
+                    # b_int=np.copy(buffer)
                     num_columns_nf = buffer.shape[1]
-                    
-         
-                    final_lable_array.append(fal)
-                    final_lable_array_np = np.concatenate(final_lable_array, axis=0) if final_lable_array else np.empty((0, 21))
-                    # print('final_lable_array_np.shape', final_lable_array_np.shape)
-                    fl=np.array(final_lable_array_np).reshape(-1, 21)
 
+                    ########################################################################################################################################################        
+                
                 else:
                     image_window.start_new_trial()
-                    for n in range(0,5): #looking at each image for 5 seconds
+                    for n in range(0,50): #looking at each image for 5 seconds
                         print('n', n)
-                        for i in range(self.numberOfGetDataCalls): 
+                        for i in range(25): #self.numberOfGetDataCalls
                             device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
                             dataa = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
                             data = np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength
                             tdata.append(data.copy())
                             tdataarray=np.array(tdata)
-                                
+                            
                         new_totdata_array = tdataarray.reshape(-1, 17) 
                         Last_data=new_totdata_array[:, :8]
                         raw.append(Last_data)
                         
-
-
-                        buffer = np.append(buffer, Last_data[-250:, :], axis=0)
+                        ##########################################################################################################################################################
+                        buffer = np.append(buffer, Last_data[-25:, :], axis=0)
                         if buffer.shape[0] > buffer_size_samples:
                             num_extra_samples = buffer.shape[0] - buffer_size_samples
                             buffer = buffer[num_extra_samples:, :]
@@ -617,6 +602,7 @@ class RootWindow:
                         Combined_raw_eeg_nf_bp = np.copy(buffer)
                         num_columns_nf = buffer.shape[1]
                         
+                        #1. Bandpass
                         for column in range(num_columns_nf):
                             Combined_raw_eeg_nf_bp[:, column], filter_states[column] = self.butter_bandpass_filter(
                                 Combined_raw_eeg_nf_bp[:, column], lowcut=.4, highcut=40, fs=250, order=5, initial_state=filter_states[column])
@@ -629,33 +615,23 @@ class RootWindow:
                             BP_artifact_RJ= self.reject_artifacts(BP_artifact_RJ.iloc[-(n+1)*250:], channel)     
                         DN=pd.concat([initial_BP_artifact_RJ, BP_artifact_RJ], axis=0)
                         
-                        # 4. Denoising and other preprocessing
+                        # 3. Denoising and other preprocessing
                         DN.columns = selected_columns
                         eeg_df_denoised = self.preprocess(DN, col_names=selected_columns, n_clusters=[50]*len(selected_columns))                            
-                        # print('eeg_df_denoised', type(eeg_df_denoised), eeg_df_denoised.shape)
+                        
+                        # 4. base rejection
                         eeg_base_corrected=eeg_df_denoised.subtract(base_mean, axis=1)
-                        # print('eeg_base_corrected', eeg_base_corrected.shape)
-
-                        denoised=pd.DataFrame(eeg_df_denoised)
-                        # print('denoised',denoised.shape)
 
                         chunks = np.array_split(eeg_base_corrected.to_numpy(), 5, axis=0)                    
                         eeg_signal = chunks[4].reshape(8, 250)  # reshaped to (8, 250)
                         Xn=eeg_signal.reshape(-1,2000)
                         predictions =loaded_model.predict(Xn)
+                        
                         instruction = self.instruction_mapping[seq_list[self.block]]
                         correct_prediction = (instruction == 'Face' and predictions[0] == 0) or (instruction == 'Scene' and predictions[0] == 1)
-                        label_array = np.zeros((250, 4), dtype=object) 
-                        label_array[:, 2] = 'F' if instruction == 'Face' else 'S'                    
-                        for row in range(label_array.shape[0]):
-                            if (instruction == 'Face' and correct_prediction):
-                                label_array[row, 0] = 'F'
-                            if (instruction == 'Scene' and correct_prediction):
-                                label_array[row, 0] = 'S'
-                            elif (instruction == 'Face' and not correct_prediction) or (instruction == 'Scene' and not correct_prediction):
-                                label_array[row, 0] = 'N'
-                        label_array[:, 1] =label_array[:, 0]         
-                        label_array[:, 3] = 1 if correct_prediction else 0        
+                        label_array = np.zeros((25, 4), dtype=object) 
+                        fill_value = 'F' if instruction == 'Face' else 'S'
+                        label_array.fill(fill_value)   
                         
                         # Adjust alpha
                         if instruction == 'Face':
@@ -663,50 +639,58 @@ class RootWindow:
                                 face_alpha_index = min(face_alpha_index + 1, len(face_alpha_values) - 1)
                             else:
                                 face_alpha_index = max(face_alpha_index - 1, 0)
-                        else:  # Instruction is 'Scene'
+                        else:  
                             if correct_prediction:
                                 face_alpha_index = max(face_alpha_index - 1, 0) 
                             else:
                                 face_alpha_index = min(face_alpha_index + 1, len(face_alpha_values) - 1)
-                        
                         new_face_alpha=face_alpha_values[face_alpha_index]
-                        image_window.update_transparency(new_face_alpha)
                         
+                        
+                        if n>10:
+                            image_window.update_transparency(new_face_alpha)
+                        
+                        ##########################################################################################################################################
                         lable.append(label_array)
                         nplable=np.array(lable).reshape(-1, 4)
                         fal = np.concatenate((new_totdata_array, nplable), axis=1)
-                        # print('nplable', nplable.shape)
+             
+                    final_lable_array.append(fal)
+                        
                    
 
                     image_window.display_gray_image()
+                    tdata_r=[]
+                    lable_r=[]
                     for n in range(0,3): #looking at each image for 5 seconds
                         print('n', n)
                         for i in range(self.numberOfGetDataCalls): 
                             device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
-                            dataa= np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
-                            data= np.reshape(dataa, (self.numberOfAcquiredChannels)) #self.FrameLength
-                            tdata.append(data.copy())
-                            tdataarray=np.array(tdata)
+                            dataa_r= np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
+                            data_r= np.reshape(dataa_r, (self.numberOfAcquiredChannels)) #self.FrameLength
+                            tdata_r.append(data_r.copy())
+                            tdataarray_r=np.array(tdata_r)
                                 
-                        new_totdata_array = tdataarray.reshape(-1, 17)
+                        new_totdata_array_r = tdataarray_r.reshape(-1, 17)
          
                         
-                        label= np.zeros((250, 4), dtype=object) 
-                        label.fill('r') 
-                        lable.append(label)
-                        nplable=np.array(lable).reshape(-1, 4)
+                        label_r= np.zeros((250, 4), dtype=object) 
+                        label_r.fill('r') 
+                        lable_r.append(label_r)
+                        nplable_r=np.array(lable_r).reshape(-1, 4)
                     
-                    print('tdata', len(tdata), 'new_totdata_array.shape', 'j=', j,  new_totdata_array.shape)    
+                        # print('tdata', len(tdata), 'new_totdata_array.shape', 'j=', j,  new_totdata_array.shape)    
 
-                    fal = np.concatenate((new_totdata_array, nplable), axis=1)
+                        fal_r = np.concatenate((new_totdata_array_r, nplable_r), axis=1)
                     
                     # fal_f=np.vstack((fal, rest ))
                     
-                    # del tdata
-                    final_lable_array.append(fal)                   
+                    del tdata
+                    final_lable_array.append(fal_r)                   
                     final_lable_array_np = np.concatenate(final_lable_array, axis=0) if final_lable_array else np.empty((0, 21))
                     
-                    # print('final_lable_array_np.shape', final_lable_array_np.shape)
+                    print('final_lable_array_np.shape', final_lable_array_np.shape)
+                    
                     fl=np.array(final_lable_array_np).reshape(-1, 21)
                     
             del seq_list 
