@@ -587,10 +587,10 @@ class RootWindow:
                     num_columns_nf = buffer.shape[1]
                     
          
-                    # final_lable_array.append(fal)
-                    # final_lable_array_np = np.concatenate(final_lable_array, axis=0) if final_lable_array else np.empty((0, 21))
-                    # # print('final_lable_array_np.shape', final_lable_array_np.shape)
-                    # fl=np.array(final_lable_array_np).reshape(-1, 21)
+                    final_lable_array.append(fal)
+                    final_lable_array_np = np.concatenate(final_lable_array, axis=0) if final_lable_array else np.empty((0, 21))
+                    # print('final_lable_array_np.shape', final_lable_array_np.shape)
+                    fl=np.array(final_lable_array_np).reshape(-1, 21)
 
                 else:
                     image_window.start_new_trial()
