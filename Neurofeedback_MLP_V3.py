@@ -495,7 +495,7 @@ class RootWindow:
             buffer_size_samples = buffer_size_seconds * samples_per_second
             buffer = np.zeros((buffer_size_samples, 8))  # 8 is the number of EEG channels
             filter_states = [None] * num_columns_nf
-            face_alpha_values = [10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,210] 
+            face_alpha_values = [19,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,201] 
             face_alpha_index=2
 
             #############################################################################################################################################
