@@ -745,7 +745,7 @@ class RootWindow:
             
             tpw_0=[]
             image_window.pleaseWait_image()
-            for pw in range(0, 15):
+            for pw in range(0, 1):
                 for p in range(0, 2*self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
                     pw_0 = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
@@ -763,7 +763,7 @@ class RootWindow:
             del tpw_np_0  
             
             tpw=[]
-            for pw2 in range(0, 30):
+            for pw2 in range(0, 1):
                 for p in range(0, self.numberOfGetDataCalls): #self.numberOfGetDataCalls=250
                     device.GetData(self.FrameLength, self.receiveBuffer, self.receiveBufferBufferLength)
                     pw = np.frombuffer(self.receiveBuffer, dtype=np.float32, count=self.numberOfAcquiredChannels * self.FrameLength)
@@ -815,7 +815,7 @@ class RootWindow:
                 tdata=[]
                 root.update()
                 
-                for j in range (0,41):
+                for j in range (0,42):
                     row_data = excel_file_lable.iloc[j,[1, 2, 3]].to_numpy()
                     print('row_data', row_data)
                     image_window.next_image()  

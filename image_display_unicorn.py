@@ -41,12 +41,12 @@ class DisplayImage:
             self.p = 0
             print('Creating array')
             for i in self.block_order:
-                for images in range(42):
+                for images in range(41):
                     img = Image.open(f"Images/Composite_Images/Block{i}/{images}.jpg")
                     self.image_arr.append(img)
         else:
             self.instruct_order=self.block_order
-            for n in range(42):
+            for n in range(41):
                 img = Image.open(f"Images/Composite_Images/Block{self.block_order}/{n}.jpg")
                 self.image_arr.append(img)
 
