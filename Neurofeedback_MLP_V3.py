@@ -772,7 +772,7 @@ class RootWindow:
                     self.patient_progress[3]=self.block+1    
                 print('randomized_blocks:', seq_list[self.block])
                 tdata_inst=[]
-                image_window.instructions_image()
+                image_window.instructions_image()                                                                                                                                                                                                                                                                          
                 top.update()
 
                 for p in range(0, 5* self.numberOfGetDataCalls):  # self.numberOfGetDataCalls=250
