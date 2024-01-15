@@ -782,7 +782,7 @@ class RootWindow:
                     tdata_inst.append(data_inst.tolist())  # Convert to list before appending
                 
                 data_inst_np = np.array(tdata_inst)
-                print("Sample data:", data_inst_np[:5])
+                # print("Sample data:", data_inst_np[:5])
 
                 csv_filename = f'data_inst_np_{self.block}_{seq_list[self.block]}.csv'
                 csv_filepath = os.path.join(pre_folder if self.curr_phase.get() == "Pre-Evaluation" else post_folder, csv_filename)
