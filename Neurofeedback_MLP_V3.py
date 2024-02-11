@@ -92,12 +92,13 @@ class KeyPressDetector:
         return result
 
 class RootWindow:
-    def __init__(self, master):
+    def __init__(self, master, *args, **kwargs):
         self.master = master  
         self.SamplingRate = UnicornPy.SamplingRate
         self.SerialNumber = 'UN-2021.05.36'
         self.numberOfAcquiredChannels = device.GetNumberOfAcquiredChannels()
         self.configuration = device.GetConfiguration()
+        self.acquisition_started = False
         self.AcquisitionDurationInSeconds = 1 
         self.FrameLength=1
         self.numberOfGetDataCalls = int(self.AcquisitionDurationInSeconds * self.SamplingRate / self.FrameLength)
@@ -190,8 +191,7 @@ class RootWindow:
         self.frame_2.grid(padx=30, pady=50, row=0, column=1)
 
         self.frame_3 = tk.Frame(master)
-
-         
+ 
         blist = ["1", "2", "3", "4", "5", "6", "7", "8"]
         self.single_block_num_var = IntVar()
         self.block_box = ttk.Combobox(self.frame_3, values=blist, state='readonly', font=10,
@@ -425,7 +425,7 @@ class RootWindow:
         t.start()   
 
     def start_trial(self):
-        global image_window, top
+        # global image_window, top
         self.master.focus_set()
         patient_name = self.patient_name_data.get() # Get patient name and create the patient folder
         patient_folder= os.path.join("2-Patient Data", patient_name)
@@ -433,7 +433,13 @@ class RootWindow:
         post_folder= os.path.join(patient_folder, "Post Evaluation")
         neuro_folder= os.path.join(patient_folder, "Neurofeedback")
         fs=250
-      
+        
+        # Check if acquisition has already started
+        if not self.acquisition_started:
+            device.StartAcquisition(False)
+            # Mark acquisition as started
+            self.acquisition_started = True
+            
         if not os.path.exists(patient_folder):
             os.makedirs(patient_folder)
         
@@ -444,7 +450,7 @@ class RootWindow:
             self.patient_progress[2]=self.block+1
             print('randomized_blocks:',seq_list[self.block])
 
-            device.StartAcquisition(False)
+            # device.StartAcquisition(False)
         
             ############################################################################################################################################
             #please wait image
@@ -645,8 +651,7 @@ class RootWindow:
                             else:
                                 face_alpha_index = min(face_alpha_index + 1, len(face_alpha_values) - 1)
                         new_face_alpha=face_alpha_values[face_alpha_index]
-                        
-                        
+                         
                         if n>10:
                             image_window.update_transparency(new_face_alpha)
                         
@@ -656,9 +661,7 @@ class RootWindow:
                         fal = np.concatenate((new_totdata_array, nplable), axis=1)
              
                     final_lable_array.append(fal)
-                        
-                   
-
+                    
                     image_window.display_gray_image()
                     tdata_r=[]
                     lable_r=[]
@@ -716,7 +719,7 @@ class RootWindow:
         
         
         
-        
+        #pre evaluation
         else: 
             seq_list = [int(x) for x in self.seq if x.isdigit()]
             print('self.seq', self.seq)
@@ -872,12 +875,11 @@ class RootWindow:
                 self.update_gui()
                 self.update_patient_data()
             
-               
                 # self.receiveBuffer = np.empty_like(self.receiveBuffer)
         image_window.pleaseWait_image()   
         self.update_gui()
         self.update_patient_data() 
-        device.StopAcquisition()      
+        # device.StopAcquisition()      
 
     ################################################################################################################################    
     ################################################################################################################################
@@ -903,8 +905,8 @@ class RootWindow:
         del self.seq
         self.add_patient_data()
         image_window.close_window()
-        device.StopAcquisition()
-        print('Disconnected')
+        # device.StopAcquisition()
+        # print('Disconnected')
 
     def update_gui(self):
         self.block += 1

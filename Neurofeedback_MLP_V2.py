@@ -815,7 +815,7 @@ class RootWindow:
                 tdata=[]
                 root.update()
                 
-                for j in range (0,42):
+                for j in range (0,41):
                     row_data = excel_file_lable.iloc[j,[1, 2, 3]].to_numpy()
                     print('row_data', row_data)
                     image_window.next_image()  
