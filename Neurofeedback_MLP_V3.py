@@ -425,7 +425,7 @@ class RootWindow:
         t.start()   
 
     def start_trial(self):
-        # global image_window, top
+        global image_window, top
         self.master.focus_set()
         patient_name = self.patient_name_data.get() # Get patient name and create the patient folder
         patient_folder= os.path.join("2-Patient Data", patient_name)
@@ -434,11 +434,11 @@ class RootWindow:
         neuro_folder= os.path.join(patient_folder, "Neurofeedback")
         fs=250
         
-        # Check if acquisition has already started
-        if not self.acquisition_started:
-            device.StartAcquisition(False)
-            # Mark acquisition as started
-            self.acquisition_started = True
+        # # Check if acquisition has already started
+        # if not self.acquisition_started:
+        #     device.StartAcquisition(False)
+        #     # Mark acquisition as started
+        #     self.acquisition_started = True
             
         if not os.path.exists(patient_folder):
             os.makedirs(patient_folder)
@@ -450,7 +450,7 @@ class RootWindow:
             self.patient_progress[2]=self.block+1
             print('randomized_blocks:',seq_list[self.block])
 
-            # device.StartAcquisition(False)
+            device.StartAcquisition(False)
         
             ############################################################################################################################################
             #please wait image
@@ -879,7 +879,7 @@ class RootWindow:
         image_window.pleaseWait_image()   
         self.update_gui()
         self.update_patient_data() 
-        # device.StopAcquisition()      
+        device.StopAcquisition()      
 
     ################################################################################################################################    
     ################################################################################################################################
